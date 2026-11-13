@@ -1,0 +1,213 @@
+title: 极空间
+views:
+  # ── 概览 ─────────────────────────────────────────────
+  - title: 概览
+    path: overview
+    icon: mdi:nas
+    cards:
+      - type: markdown
+        content: |
+          {% set ents = integration_entities('zspace_nas') | expand | list %}
+          {% set ns = namespace(running=0, total=0, uptime='—') %}
+          {% for e in ents %}
+            {% if '运行中' in e.name %}
+              {% set ns.total = ns.total + 1 %}
+              {% if e.state == 'on' %}{% set ns.running = ns.running + 1 %}{% endif %}
+            {% endif %}
+            {% if '运行时长' in e.name %}{% set ns.uptime = e.state %}{% endif %}
+          {% endfor %}
+          ### 极空间 NAS
+          运行 {{ ns.uptime }} · 容器 **{{ ns.running }}/{{ ns.total }}** 在运行
+
+      - type: markdown
+        content: |
+          {% set ents = integration_entities('zspace_nas') | expand | list %}
+          {% set ns = namespace(cpu='—', mem='—', mem_used='—', temp='—', fan='—', rx=0, tx=0) %}
+          {% for e in ents %}
+            {% if 'CPU 使用率' in e.name %}{% set ns.cpu = e.state %}
+            {% elif '内存使用率' in e.name %}{% set ns.mem = e.state %}
+            {% elif '内存已用' in e.name %}{% set ns.mem_used = e.state %}
+            {% elif 'CPU 温度' in e.name %}{% set ns.temp = e.state %}
+            {% elif '风扇转速' in e.name %}{% set ns.fan = e.state %}
+            {% elif '网络接收' in e.name %}{% set ns.rx = e.state | float(0) %}
+            {% elif '网络发送' in e.name %}{% set ns.tx = e.state | float(0) %}
+            {% endif %}
+          {% endfor %}
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:14px;text-align:center">
+            <div><div style="font-size:12px;color:var(--secondary-text-color)">CPU</div><div style="font-size:24px;font-weight:500">{{ ns.cpu }}<span style="font-size:13px">%</span></div></div>
+            <div><div style="font-size:12px;color:var(--secondary-text-color)">内存</div><div style="font-size:24px;font-weight:500">{{ ns.mem }}<span style="font-size:13px">%</span></div><div style="font-size:11px;color:var(--secondary-text-color)">{{ ns.mem_used }} GiB</div></div>
+            <div><div style="font-size:12px;color:var(--secondary-text-color)">温度</div><div style="font-size:24px;font-weight:500">{{ ns.temp }}<span style="font-size:13px">℃</span></div></div>
+            <div><div style="font-size:12px;color:var(--secondary-text-color)">风扇</div><div style="font-size:24px;font-weight:500">{{ ns.fan }}</div><div style="font-size:11px;color:var(--secondary-text-color)">rpm</div></div>
+            <div><div style="font-size:12px;color:var(--secondary-text-color)">下行</div><div style="font-size:20px;font-weight:500">{{ (ns.rx / 1048576) | round(2) }}</div><div style="font-size:11px;color:var(--secondary-text-color)">MB/s</div></div>
+            <div><div style="font-size:12px;color:var(--secondary-text-color)">上行</div><div style="font-size:20px;font-weight:500">{{ (ns.tx / 1048576) | round(2) }}</div><div style="font-size:11px;color:var(--secondary-text-color)">MB/s</div></div>
+          </div>
+
+      - type: markdown
+        content: |
+          {% set ents = integration_entities('zspace_nas') | expand | list %}
+          **存储池**
+          {% for u in ents %}
+            {% if '存储池' in u.name and u.name.endswith('使用率') %}
+              {% set pool = u.name.split('存储池 ')[1].split(' 使用率')[0] %}
+              {% set ns = namespace(used='—', free='0') %}
+              {% for x in ents %}
+                {% if pool ~ ' 已用' in x.name %}{% set ns.used = x.state %}{% endif %}
+                {% if pool ~ ' 可用' in x.name %}{% set ns.free = x.state %}{% endif %}
+              {% endfor %}
+              {% set pct = u.state | float(0) %}
+              {% set total = (ns.used | float(0)) + (ns.free | float(0)) %}
+          <div style="margin:10px 0">
+            <div style="display:flex;justify-content:space-between;font-size:13px">
+              <span>{{ pool }}</span>
+              <span style="color:var(--secondary-text-color)">{{ ns.used }} / {{ total | round(0) }} GiB · {{ u.state }}%</span>
+            </div>
+            <div style="height:6px;background:var(--divider-color);border-radius:3px;margin-top:5px">
+              <div style="height:6px;width:{{ [pct, 100] | min }}%;border-radius:3px;background:{% if pct > 85 %}var(--error-color){% elif pct > 70 %}var(--warning-color){% else %}var(--primary-color){% endif %}"></div>
+            </div>
+          </div>
+            {% endif %}
+          {% endfor %}
+
+      - type: markdown
+        content: |
+          {% set ents = integration_entities('zspace_nas') | expand | list %}
+          **磁盘**
+          <table style="width:100%;font-size:13px;border-collapse:collapse">
+          <tr style="color:var(--secondary-text-color);font-size:12px;text-align:left">
+            <th style="font-weight:400;padding:4px 0">盘位</th><th style="font-weight:400">温度</th>
+            <th style="font-weight:400">通电</th><th style="font-weight:400">重映射</th><th style="font-weight:400">健康</th>
+          </tr>
+          {% for t in ents %}
+            {% if '磁盘' in t.name and t.name.endswith('温度') %}
+              {% set dev = t.name.split('磁盘 ')[1].split(' 温度')[0] %}
+              {% set ns = namespace(poh='—', realloc='—', health='off') %}
+              {% for x in ents %}
+                {% if dev ~ ' 通电时间' in x.name %}{% set ns.poh = x.state %}{% endif %}
+                {% if dev ~ ' 重映射扇区' in x.name %}{% set ns.realloc = x.state %}{% endif %}
+                {% if dev ~ ' 健康' in x.name %}{% set ns.health = x.state %}{% endif %}
+              {% endfor %}
+          <tr style="border-top:1px solid var(--divider-color)">
+            <td style="padding:6px 0">{{ dev }}</td>
+            <td>{{ t.state }}℃</td>
+            <td>{{ ns.poh }} h</td>
+            <td>{{ ns.realloc }}</td>
+            <td>{% if ns.health == 'on' %}<span style="color:var(--error-color)">异常</span>{% else %}<span style="color:var(--success-color)">正常</span>{% endif %}</td>
+          </tr>
+            {% endif %}
+          {% endfor %}
+          </table>
+
+      - type: markdown
+        content: |
+          {% set ents = integration_entities('zspace_nas') | expand | list %}
+          {% set ns = namespace(active='0', rate=0, seed='0') %}
+          {% for e in ents %}
+            {% if '下载任务' in e.name %}{% set ns.active = e.state %}{% endif %}
+            {% if '下载速度' in e.name %}{% set ns.rate = e.state | float(0) %}{% endif %}
+            {% if '做种任务' in e.name %}{% set ns.seed = e.state %}{% endif %}
+          {% endfor %}
+          下载任务 **{{ ns.active }}** 个 · 做种 **{{ ns.seed }}** · 速度 {{ (ns.rate / 1048576) | round(2) }} MB/s
+
+  # ── 容器 ─────────────────────────────────────────────
+  - title: 容器
+    path: containers
+    icon: mdi:docker
+    cards:
+      - type: markdown
+        content: |
+          {% set ents = integration_entities('zspace_nas') | expand | list %}
+          {% set ns = namespace(running=0, total=0) %}
+          {% for e in ents %}
+            {% if '运行中' in e.name %}
+              {% set ns.total = ns.total + 1 %}
+              {% if e.state == 'on' %}{% set ns.running = ns.running + 1 %}{% endif %}
+            {% endif %}
+          {% endfor %}
+          ### 容器 {{ ns.running }} / {{ ns.total }}
+          开关受白名单控制：只有「允许控制的容器」里命中的才会出现，删除类操作不开放。
+
+      - type: custom:auto-entities
+        card:
+          type: entities
+          title: 运行中
+          state_color: true
+        filter:
+          include:
+            - integration: zspace_nas
+              domain: switch
+              state: "on"
+        sort:
+          method: friendly_name
+
+      - type: custom:auto-entities
+        card:
+          type: entities
+          title: 已停止
+          state_color: true
+        filter:
+          include:
+            - integration: zspace_nas
+              domain: switch
+              state: "off"
+        sort:
+          method: friendly_name
+
+      - type: custom:auto-entities
+        card:
+          type: glance
+          title: 磁盘健康
+          columns: 3
+        filter:
+          include:
+            - integration: zspace_nas
+              domain: binary_sensor
+              attributes:
+                device_class: problem
+
+  # ── 趋势 ─────────────────────────────────────────────
+  - title: 趋势
+    path: trends
+    icon: mdi:chart-line
+    cards:
+      - type: markdown
+        content: |
+          下面两张卡需要 `auto-entities`（HACS → 前端 → 搜 auto-entities）。
+          没装的话会显示成红色报错，装上并刷新即可。
+
+      - type: custom:auto-entities
+        card:
+          type: statistics-graph
+          title: CPU / 内存 / 存储池使用率
+          chart_type: line
+          period: hour
+          days_to_show: 2
+          stat_types:
+            - mean
+          hide_legend: false
+        filter:
+          include:
+            - integration: zspace_nas
+              domain: sensor
+              attributes:
+                unit_of_measurement: "%"
+        sort:
+          method: friendly_name
+
+      - type: custom:auto-entities
+        card:
+          type: statistics-graph
+          title: 网络收发（B/s）
+          chart_type: line
+          period: hour
+          days_to_show: 1
+          stat_types:
+            - mean
+          hide_legend: false
+        filter:
+          include:
+            - integration: zspace_nas
+              domain: sensor
+              attributes:
+                device_class: data_rate
+        sort:
+          method: friendly_name
