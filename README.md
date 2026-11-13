@@ -95,10 +95,15 @@ Token 由 CLI 自己刷新，搬到 HA 之后不需要再登录。
 
 ## 安装
 
-**手动（推荐，仓库为私有）**：把 `custom_components/zspace_nas` 整个目录复制到 HA 的
-`/config/custom_components/` 下，重启。或者用 `dist/ha-zspace-nas-<version>.zip` 解压到 `/config`。
+**HACS**：HACS → 集成 → 右上角三点 → 自定义存储库 → 粘贴
+`https://github.com/michaelggr/ha-zspace-nas`，类别选 Integration → 安装 → 重启。
 
-**HACS**：本仓库为私有仓库，HACS 拉取私有仓库需要配置 GitHub Token；自己用的话直接复制目录更省事。
+**HA 2026.11+（Marketplace）**：Settings → Marketplace → Add from link → 粘贴同一个地址。
+
+**手动**：把 `custom_components/zspace_nas` 整个目录复制到 `/config/custom_components/`，或用
+`dist/ha-zspace-nas-<version>.zip` 解压到 `/config`。
+
+> HACS 只装代码。CLI 二进制与登录态仍需按上面「前置条件」自行准备。
 
 ## 配置
 
