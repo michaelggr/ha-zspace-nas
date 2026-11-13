@@ -1,0 +1,19 @@
+# 可选：把极空间面板固定到侧边栏（YAML 模式）
+#
+# 1) 把 dashboards/zspace/dashboard.yaml 复制到 HA 的 /config/zspace/dashboard.yaml
+# 2) 在 /config/configuration.yaml 末尾加上下面这段
+# 3) 重启 Home Assistant，侧边栏会出现「极空间」
+#
+# 不想改 configuration.yaml 的话，用 UI 新建仪表盘也一样会出现在侧边栏里，
+# 见 dashboards/README.md 的「方式一」。
+
+lovelace:
+  mode: storage
+  dashboards:
+    zspace:
+      mode: yaml
+      title: 极空间
+      icon: mdi:nas
+      show_in_sidebar: true
+      require_admin: false
+      filename: zspace/dashboard.yaml

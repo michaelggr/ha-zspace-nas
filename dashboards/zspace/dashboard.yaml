@@ -211,3 +211,60 @@ views:
                 device_class: data_rate
         sort:
           method: friendly_name
+
+  # ── 全部实体 ─────────────────────────────────────────
+  - title: 全部实体
+    path: all
+    icon: mdi:format-list-bulleted
+    cards:
+      - type: markdown
+        content: |
+          {% set ents = integration_entities('zspace_nas') | expand | list %}
+          {% set ns = namespace(sensor=0, binary=0, switch=0, button=0, other=0) %}
+          {% for e in ents %}
+            {% if e.domain == 'sensor' %}{% set ns.sensor = ns.sensor + 1 %}
+            {% elif e.domain == 'binary_sensor' %}{% set ns.binary = ns.binary + 1 %}
+            {% elif e.domain == 'switch' %}{% set ns.switch = ns.switch + 1 %}
+            {% elif e.domain == 'button' %}{% set ns.button = ns.button + 1 %}
+            {% else %}{% set ns.other = ns.other + 1 %}{% endif %}
+          {% endfor %}
+          ### 全部实体
+          传感器 **{{ ns.sensor }}** · 二进制 **{{ ns.binary }}** · 开关 **{{ ns.switch }}** · 按钮 **{{ ns.button }}**{% if ns.other %} · 其它 {{ ns.other }}{% endif %}
+
+      - type: custom:auto-entities
+        card:
+          type: entities
+          title: 传感器
+          state_color: true
+        filter:
+          include:
+            - integration: zspace_nas
+              domain: sensor
+        sort:
+          method: friendly_name
+
+      - type: custom:auto-entities
+        card:
+          type: entities
+          title: 二进制传感器
+          state_color: true
+        filter:
+          include:
+            - integration: zspace_nas
+              domain: binary_sensor
+        sort:
+          method: friendly_name
+
+      - type: custom:auto-entities
+        card:
+          type: entities
+          title: 开关与按钮
+          state_color: true
+        filter:
+          include:
+            - integration: zspace_nas
+              domain: switch
+            - integration: zspace_nas
+              domain: button
+        sort:
+          method: friendly_name
