@@ -11,11 +11,16 @@ from .base import (
     ZspacePermissionError,
     ZspaceUnavailableError,
 )
+from .binary import binary_available, resolve_binary
 from .cli import ZspaceCliClient
+from .login import ZspaceLogin
 from .policy import ZspacePolicyError
 
 __all__ = [
     "ZspaceAuthError",
+    "ZspaceLogin",
+    "binary_available",
+    "resolve_binary",
     "ZspaceCliClient",
     "ZspaceError",
     "ZspaceNotFoundError",

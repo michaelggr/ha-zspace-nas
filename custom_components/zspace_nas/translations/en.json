@@ -3,29 +3,35 @@
     "step": {
       "user": {
         "title": "Connect ZSpace NAS",
-        "description": "Authorize once on a computer, then copy the session over:\n1. On your PC run `zspace-cli login` with `ZSPACE_CLI_HOME=./zprofile`;\n2. Copy the whole `zprofile` folder to `{profile_dir}`;\n3. Put the matching `zspace-cli` binary at the executable path and `chmod +x` it.",
+        "description": "The CLI binary ships with this integration. The session is stored in `{profile_dir}`. Submit, then authorize via the link if needed.",
         "data": {
-          "binary_path": "Path to zspace-cli",
-          "profile_home": "Session directory (ZSPACE_CLI_HOME)",
+          "binary_path": "CLI path (empty = bundled)",
+          "profile_home": "Session directory",
           "profile": "Profile name",
           "host": "NAS LAN address (optional)",
           "allow_insecure_http": "Allow plain HTTP (insecure)"
         },
         "data_description": {
-          "host": "Leave empty to use the oauth.zconnect.cn relay; use https://IP:5055 for direct LAN access.",
-          "allow_insecure_http": "Only when the device has no trusted certificate; tokens will travel in clear text."
+          "binary_path": "Bundled binary is picked by CPU architecture, usually leave empty.",
+          "host": "Empty uses the oauth.zconnect.cn relay; https://IP:5055 for direct LAN.",
+          "allow_insecure_http": "Only when the device has no trusted certificate."
         }
       },
-      "reauth_confirm": {
-        "title": "Reauthorize ZSpace",
-        "description": "The session expired. Authorize again on your computer, replace `{profile_dir}`, then submit.",
-        "data": {}
+      "auth": {
+        "title": "Authorize ZSpace",
+        "description": "Open the link below, sign in and approve, then paste the one-time code here.\n\n**{url}**\n\nThe link is valid for {expires_in} seconds; an expired link is regenerated.",
+        "data": {
+          "code": "One-time authorization code"
+        }
       }
     },
     "error": {
       "auth": "Session invalid or expired, please reauthorize",
-      "binary_missing": "zspace-cli not found or not executable",
+      "binary_missing": "Bundled CLI missing or not executable; check the HACS installation",
       "cannot_connect": "Cannot reach the NAS, check address and network",
+      "invalid_code": "Invalid or expired code, retry with a fresh link",
+      "expired": "Authorization timed out, request a new link",
+      "login_failed": "Cannot start the authorization flow; check that the session directory is writable",
       "unknown": "Unexpected error, check the logs"
     },
     "abort": {

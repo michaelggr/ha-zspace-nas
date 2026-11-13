@@ -19,6 +19,7 @@ from .base import (
     ZspacePermissionError,
     ZspaceUnavailableError,
 )
+from .binary import resolve_binary
 from .policy import assert_dump_allowed, assert_not_destructive, assert_write_allowed
 
 _LOGGER = logging.getLogger(__name__)
@@ -39,7 +40,7 @@ class ZspaceCliClient:
         max_concurrency: int = 2,
         allow_write: bool = False,
     ) -> None:
-        self._binary = binary
+        self._binary = resolve_binary(binary)
         self._profile_home = profile_home
         self._profile = profile
         self._host = host or None

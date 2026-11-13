@@ -3,29 +3,35 @@
     "step": {
       "user": {
         "title": "连接极空间 NAS",
-        "description": "先在电脑上完成一次授权，再把登录态搬到 HA：\n1. 电脑上设置 `ZSPACE_CLI_HOME=./zprofile`，执行 `zspace-cli login` 完成网页授权；\n2. 把整个 `zprofile` 目录复制到 `{profile_dir}`；\n3. 把对应平台的 `zspace-cli` 放到填写的可执行文件路径，并 `chmod +x`。",
+        "description": "二进制已随集成内置，登录态默认存在 `{profile_dir}`。填完提交后，如果没有登录过会给你一个授权链接。",
         "data": {
-          "binary_path": "CLI 可执行文件路径",
-          "profile_home": "登录态目录（ZSPACE_CLI_HOME）",
+          "binary_path": "CLI 路径（留空用内置）",
+          "profile_home": "登录态目录",
           "profile": "Profile 名称",
           "host": "NAS 局域网地址（可选）",
           "allow_insecure_http": "允许 HTTP 明文连接（不安全）"
         },
         "data_description": {
+          "binary_path": "内置二进制按 CPU 架构自动选择，一般不用填。",
           "host": "留空则走 oauth.zconnect.cn 云代理；填 https://IP:5055 可走局域网直连。",
           "allow_insecure_http": "仅在局域网设备没有可信证书时使用，令牌会暴露在链路上。"
         }
       },
-      "reauth_confirm": {
-        "title": "重新授权极空间",
-        "description": "登录态已失效。请重新在电脑上授权，并把新的 profile 目录覆盖到 `{profile_dir}`，然后提交。",
-        "data": {}
+      "auth": {
+        "title": "授权极空间",
+        "description": "打开下面的链接登录极空间并同意授权，把页面给出的一次性授权码粘回这里。\n\n**{url}**\n\n链接 {expires_in} 秒内有效，过期会重新生成。",
+        "data": {
+          "code": "一次性授权码"
+        }
       }
     },
     "error": {
-      "auth": "登录态无效或已过期，请重新授权后重试",
-      "binary_missing": "找不到可执行的 zspace-cli，请检查路径与执行权限",
+      "auth": "登录态无效或已过期，请重新授权",
+      "binary_missing": "内置二进制缺失或不可执行，请检查 HACS 安装是否完整",
       "cannot_connect": "无法连接 NAS，请检查地址与网络",
+      "invalid_code": "授权码无效或已过期，请用新链接重试",
+      "expired": "授权已超时，请重新获取链接",
+      "login_failed": "无法启动授权流程，请检查登录态目录是否可写",
       "unknown": "未知错误，请查看日志"
     },
     "abort": {

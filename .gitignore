@@ -6,7 +6,7 @@ venv/
 .DS_Store
 
 # 本地联调产物
-bin/
+/dist/install/
 .zspace/
 *.log
 

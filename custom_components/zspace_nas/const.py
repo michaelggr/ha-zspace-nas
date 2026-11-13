@@ -24,8 +24,9 @@ CONF_STORAGE_INTERVAL = "storage_interval"
 CONF_DISK_INTERVAL = "disk_interval"
 CONF_DOWNLOAD_INTERVAL = "download_interval"
 
-# HAOS 上默认把二进制与登录态放在 /config 下（跨升级保留）
-DEFAULT_BINARY = "/config/zspace_nas/bin/zspace-cli"
+# 二进制随集成下发，留空即用内置（按 CPU 架构自动选 x64/arm64）；
+# 登录态目录放 /config 下，跨升级保留。
+DEFAULT_BINARY = ""
 DEFAULT_PROFILE_HOME = "/config/zspace_nas/profile"
 DEFAULT_PROFILE = "ha"
 

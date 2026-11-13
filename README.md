@@ -53,49 +53,6 @@ NAS 关机/重启、磁盘格式化、存储池删除、RAID 重建、防火墙�
 已拦截：jellyfin 操作过于频繁，请 12 秒后再试
 ```
 
-## 前置条件
-
-集成本身不实现登录，复用官方 CLI 的登录态。三步：
-
-这两步分别是：**二进制**是真正去跟 NAS 通信的程序，**登录态**是它已经拿到的通行证。
-HACS 只装 Python 代码，这两样必须自己放进去，放一次以后不用再动。
-
-### 1. 放二进制
-
-```bash
-# 在能联网的机器上，或用 tools/fetch_cli.py 自动按平台下载并校验 sha256
-python tools/fetch_cli.py --dest ./bin
-```
-
-把对应平台的二进制放到 HA 的 `/config/zspace_nas/bin/zspace-cli` 并加执行权限：
-
-```bash
-mkdir -p /config/zspace_nas/bin
-chmod +x /config/zspace_nas/bin/zspace-cli
-```
-
-CLI 是静态链接的，HAOS（Alpine）里可直接运行。x86_64 用 `linux-x64`，树莓派/ARM NAS 用 `linux-arm64`。
-
-### 2. 电脑上授权一次
-
-```bash
-export ZSPACE_CLI_HOME=./zprofile
-./zspace-cli --profile ha login
-```
-
-浏览器完成授权后，CLI 会把登录态写进 `./zprofile`（文件后端，权限 0600）。
-
-### 3. 搬登录态
-
-把整个 `zprofile` 目录复制到 `/config/zspace_nas/profile`：
-
-```bash
-# 通过 Samba / SSH 插件等方式复制，最终结构应为：
-# /config/zspace_nas/profile/session-authority.json 等
-```
-
-Token 由 CLI 自己刷新，搬到 HA 之后不需要再登录。
-
 ## 安装
 
 **HACS**：HACS → 集成 → 右上角三点 → 自定义存储库 → 粘贴
@@ -124,6 +81,16 @@ Token 由 CLI 自己刷新，搬到 HA 之后不需要再登录。
 
 **开启容器控制**：集成页面 → 配置 → 勾选「允许容器控制」→ 提交（会自动重载）。
 未开启时不会生成开关和按钮，防止误触。
+
+## 进阶：手动准备（可选）
+
+一般不需要。以下情况才手动处理：
+
+- 想换掉内置二进制（比如自己编译的版本）→ 在集成配置里填 CLI 路径；
+- 想把某台机器上已有的登录态复用过来 → 把该目录整个复制到「登录态目录」，
+  这样添加集成时不会弹授权步骤。
+
+登录态目录结构：`<登录态目录>/profiles/<profile 名>/{config,credentials,session-authority}.json`。
 
 ## 服务
 
@@ -192,3 +159,4 @@ data:
 ## 许可
 
 MIT
+
