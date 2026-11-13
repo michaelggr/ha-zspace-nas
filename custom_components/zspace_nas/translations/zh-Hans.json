@@ -1,0 +1,74 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "连接极空间 NAS",
+        "description": "先在电脑上完成一次授权，再把登录态搬到 HA：\n1. 电脑上设置 `ZSPACE_CLI_HOME=./zprofile`，执行 `zspace-cli login` 完成网页授权；\n2. 把整个 `zprofile` 目录复制到 `{profile_dir}`；\n3. 把对应平台的 `zspace-cli` 放到填写的可执行文件路径，并 `chmod +x`。",
+        "data": {
+          "binary_path": "CLI 可执行文件路径",
+          "profile_home": "登录态目录（ZSPACE_CLI_HOME）",
+          "profile": "Profile 名称",
+          "host": "NAS 局域网地址（可选）",
+          "allow_insecure_http": "允许 HTTP 明文连接（不安全）"
+        },
+        "data_description": {
+          "host": "留空则走 oauth.zconnect.cn 云代理；填 https://IP:5055 可走局域网直连。",
+          "allow_insecure_http": "仅在局域网设备没有可信证书时使用，令牌会暴露在链路上。"
+        }
+      },
+      "reauth_confirm": {
+        "title": "重新授权极空间",
+        "description": "登录态已失效。请重新在电脑上授权，并把新的 profile 目录覆盖到 `{profile_dir}`，然后提交。",
+        "data": {}
+      }
+    },
+    "error": {
+      "auth": "登录态无效或已过期，请重新授权后重试",
+      "binary_missing": "找不到可执行的 zspace-cli，请检查路径与执行权限",
+      "cannot_connect": "无法连接 NAS，请检查地址与网络",
+      "unknown": "未知错误，请查看日志"
+    },
+    "abort": {
+      "already_configured": "这台极空间已经配置过了",
+      "reauth_successful": "重新授权成功"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "极空间选项",
+        "data": {
+          "allow_control": "允许容器控制",
+          "allowed_containers": "允许控制的容器",
+          "dry_run": "演练模式（只记录不执行）",
+          "protected_containers": "额外保护的容器",
+          "action_cooldown": "同一容器操作间隔",
+          "docker_interval": "Docker 轮询间隔",
+          "system_interval": "系统轮询间隔",
+          "storage_interval": "存储轮询间隔",
+          "download_interval": "下载任务轮询间隔",
+          "disk_interval": "磁盘 SMART 轮询间隔"
+        },
+        "data_description": {
+          "allow_control": "开启后才会生成容器开关与重启按钮；删除、强制停止、引擎开关永远不会开放。",
+          "allowed_containers": "逗号分隔的容器名称片段；填 * 表示全部允许（受保护的系统容器除外）。留空 = 只监控不控制。",
+          "dry_run": "开启后点击开关只会写日志，不会真的下发命令；适合先观察一段时间。",
+          "protected_containers": "逗号分隔，支持名称片段。默认已保护带 zspace/znas/zido/zvm 等字样的系统容器。",
+          "action_cooldown": "防止脚本或误触连续操作同一个容器。",
+          "download_interval": "下载任务变化较慢，默认 5 分钟。",
+          "disk_interval": "SMART 需要逐盘查询（单盘约 0.4 秒），默认 1 小时。"
+        }
+      }
+    }
+  },
+  "services": {
+    "container_action": {
+      "name": "容器动作",
+      "description": "对极空间 Docker 容器执行启动、停止或重启。"
+    },
+    "dump_raw": {
+      "name": "导出原始数据",
+      "description": "调用一次只读能力并把原始 JSON 写到 /config/zspace_nas/。"
+    }
+  }
+}

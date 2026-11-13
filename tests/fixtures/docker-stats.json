@@ -1,0 +1,17 @@
+[
+  {
+    "container_id": "5739a9365d604926baa86c8ec2d85f81eec32cfaba58137498486f36f04742d8",
+    "cpu_usage": "0.32%",
+    "cpu_usage_win": "0.04%",
+    "memory_usage": 699170816,
+    "memory_limit": 2147483648,
+    "rx_rates": 588.55,
+    "tx_rates": 0
+  },
+  {
+    "container_id": "eca970a2ca38a40b09b322f4786e8dd51ee48196ec79181d33e4d64b61026b35",
+    "cpu_usage": "0.02%",
+    "memory_usage": 1520435200,
+    "memory_limit": 4294967296
+  }
+]

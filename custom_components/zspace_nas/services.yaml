@@ -1,0 +1,53 @@
+container_action:
+  name: 容器动作
+  description: 对极空间 Docker 容器执行启动、停止或重启。
+  fields:
+    container_id:
+      name: 容器
+      description: 容器 ID、短 ID 或容器名称。
+      required: true
+      example: jellyfin
+      selector:
+        text:
+    action:
+      name: 动作
+      required: true
+      selector:
+        select:
+          options:
+            - start
+            - stop
+            - restart
+    entry_id:
+      name: 设备标识
+      description: 多台极空间时可指定，留空则按容器自动匹配。
+      required: false
+      selector:
+        text:
+
+dump_raw:
+  name: 导出原始数据
+  description: 调用一次指定能力并把原始 JSON 写到 /config/zspace_nas/，用于核对字段结构。
+  fields:
+    domain:
+      name: 业务域
+      required: true
+      example: system
+      selector:
+        text:
+    cli_action:
+      name: 动作
+      required: true
+      example: info
+      selector:
+        text:
+    params:
+      name: 参数
+      required: false
+      selector:
+        object:
+    entry_id:
+      name: 设备标识
+      required: false
+      selector:
+        text:

@@ -1,0 +1,32 @@
+{
+  "mounts": {
+    "disks": [
+      {
+        "dev_name": "sda",
+        "position": "1",
+        "mountpoint": "/data_s001",
+        "sn": "TESTDISK01",
+        "total": 4000787030016,
+        "used": 1939509518336,
+        "available": 2035506638848,
+        "smart": {
+          "device_model": "ST4000VN006-3CW104",
+          "serial_number": "TESTDISK01"
+        }
+      },
+      {
+        "dev_name": "nvme0",
+        "position": "2",
+        "mountpoint": "/data_s002",
+        "sn": "TESTDISK02",
+        "total": 2048408248320,
+        "used": 785228066816,
+        "available": 1475177668608,
+        "smart": {
+          "device_model": "GXF-S-2TB PRO",
+          "serial_number": "TESTDISK02"
+        }
+      }
+    ]
+  }
+}

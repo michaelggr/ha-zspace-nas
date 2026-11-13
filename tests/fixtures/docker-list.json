@@ -1,0 +1,35 @@
+[
+  {
+    "Id": "5739a9365d604926baa86c8ec2d85f81eec32cfaba58137498486f36f04742d8",
+    "Names": [
+      "/music-tagger"
+    ],
+    "State": "running",
+    "Status": "Up 41 hours",
+    "Image": "sha256:089b332686e4f82e7a56cd925d04f68dc6f8e98a7da922ed29caa97528ec6163",
+    "App": "",
+    "ComposeProject": ""
+  },
+  {
+    "Id": "eca970a2ca38a40b09b322f4786e8dd51ee48196ec79181d33e4d64b61026b35",
+    "Names": [
+      "/tgbot-demo"
+    ],
+    "State": "running",
+    "Status": "Up 3 days (healthy)",
+    "Image": "ghcr.io/example/tgbot-demo:latest",
+    "App": "",
+    "ComposeProject": "tgbot-demo"
+  },
+  {
+    "Id": "aaaabbbbccccddddeeeeffff0000111122223333444455556666777788889999",
+    "Names": [
+      "/media-stack"
+    ],
+    "State": "exited",
+    "Status": "Exited (0) 2 days ago",
+    "Image": "lscr.io/linuxserver/jellyfin:latest",
+    "App": "",
+    "ComposeProject": "media"
+  }
+]

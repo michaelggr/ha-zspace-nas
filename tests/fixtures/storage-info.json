@@ -1,0 +1,24 @@
+{
+  "pool_list": [
+    {
+      "name": "sata11",
+      "id": 11,
+      "total_size": 8001574060032,
+      "free_size": 2446262964224,
+      "usage_size": 5555311095808,
+      "status": "ok",
+      "pool_type": "zdr",
+      "disk_list": []
+    },
+    {
+      "name": "nvme12",
+      "id": 12,
+      "total_size": 2304468762624,
+      "free_size": 1519240695808,
+      "usage_size": 785228066816,
+      "status": "ok",
+      "pool_type": "zdr",
+      "disk_list": []
+    }
+  ]
+}

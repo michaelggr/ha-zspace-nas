@@ -1,0 +1,26 @@
+{
+  "total": 2,
+  "seedingTaskCount": 1,
+  "totalRateDownload": 1048576,
+  "totalRateUpload": 2048,
+  "list": [
+    {
+      "id": "58",
+      "name": "ubuntu.iso",
+      "isFinished": false,
+      "status": 1,
+      "completeSize": 104857600,
+      "totalSize": 1073741824,
+      "rateDownload": 1048576
+    },
+    {
+      "id": "59",
+      "name": "old-movie.mkv",
+      "isFinished": true,
+      "status": 3,
+      "completeSize": 734003200,
+      "totalSize": 734003200,
+      "rateDownload": 0
+    }
+  ]
+}

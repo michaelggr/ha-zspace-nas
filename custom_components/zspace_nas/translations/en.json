@@ -1,0 +1,74 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect ZSpace NAS",
+        "description": "Authorize once on a computer, then copy the session over:\n1. On your PC run `zspace-cli login` with `ZSPACE_CLI_HOME=./zprofile`;\n2. Copy the whole `zprofile` folder to `{profile_dir}`;\n3. Put the matching `zspace-cli` binary at the executable path and `chmod +x` it.",
+        "data": {
+          "binary_path": "Path to zspace-cli",
+          "profile_home": "Session directory (ZSPACE_CLI_HOME)",
+          "profile": "Profile name",
+          "host": "NAS LAN address (optional)",
+          "allow_insecure_http": "Allow plain HTTP (insecure)"
+        },
+        "data_description": {
+          "host": "Leave empty to use the oauth.zconnect.cn relay; use https://IP:5055 for direct LAN access.",
+          "allow_insecure_http": "Only when the device has no trusted certificate; tokens will travel in clear text."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reauthorize ZSpace",
+        "description": "The session expired. Authorize again on your computer, replace `{profile_dir}`, then submit.",
+        "data": {}
+      }
+    },
+    "error": {
+      "auth": "Session invalid or expired, please reauthorize",
+      "binary_missing": "zspace-cli not found or not executable",
+      "cannot_connect": "Cannot reach the NAS, check address and network",
+      "unknown": "Unexpected error, check the logs"
+    },
+    "abort": {
+      "already_configured": "This ZSpace device is already configured",
+      "reauth_successful": "Reauthorization successful"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "ZSpace options",
+        "data": {
+          "allow_control": "Allow container control",
+          "allowed_containers": "Containers allowed to control",
+          "dry_run": "Dry run (log only, do not execute)",
+          "protected_containers": "Extra protected containers",
+          "action_cooldown": "Cooldown per container",
+          "docker_interval": "Docker polling interval",
+          "system_interval": "System polling interval",
+          "storage_interval": "Storage polling interval",
+          "download_interval": "Download polling interval",
+          "disk_interval": "Disk SMART polling interval"
+        },
+        "data_description": {
+          "allow_control": "Creates container switches and restart buttons. Delete, force-stop and engine power are never exposed.",
+          "allowed_containers": "Comma separated name fragments; use * to allow all (protected system containers still denied). Empty = monitoring only.",
+          "dry_run": "Switch presses are only logged, no command is sent. Useful to observe behaviour first.",
+          "protected_containers": "Comma separated, matches name fragments. Names containing zspace/znas/zido/zvm are protected by default.",
+          "action_cooldown": "Prevents scripts or double taps from hammering the same container.",
+          "download_interval": "Download tasks change slowly, 5 minutes by default.",
+          "disk_interval": "SMART is queried per disk (~0.4s each), 1 hour by default."
+        }
+      }
+    }
+  },
+  "services": {
+    "container_action": {
+      "name": "Container action",
+      "description": "Start, stop or restart a ZSpace Docker container."
+    },
+    "dump_raw": {
+      "name": "Dump raw data",
+      "description": "Call one read-only capability and write the raw JSON to /config/zspace_nas/."
+    }
+  }
+}

@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.DS_Store
+
+# 本地联调产物
+bin/
+.zspace/
+*.log
+
+dist/

@@ -1,0 +1,36 @@
+{
+  "detail": {
+    "list": [
+      {
+        "basic": {
+          "name": "Z4Pro-ABCD",
+          "nasid": "DEMO00000001"
+        },
+        "cpu": {
+          "name": "Intel N305, 8核心8线程",
+          "temp": 52,
+          "used": 0.29
+        },
+        "cpu_fan": {
+          "speed": 1972,
+          "state": 0
+        },
+        "fan": {
+          "speed": 1031,
+          "state": 0
+        },
+        "memory": {
+          "total": 34359738368,
+          "used": 0.64,
+          "extra": -1
+        },
+        "net_speed": {
+          "download1s": 823944,
+          "upload1s": 3499957
+        },
+        "uptime": "763741",
+        "state": 0
+      }
+    ]
+  }
+}

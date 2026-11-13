@@ -1,0 +1,39 @@
+{
+  "health": "ok",
+  "is_ssd": false,
+  "ctime": 1794573000,
+  "attributes": [
+    {
+      "id": 5,
+      "zh_cn": "重映射扇区计数",
+      "now_value": 100,
+      "raw_value": 8,
+      "str_value": "8",
+      "health": "ok"
+    },
+    {
+      "id": 9,
+      "zh_cn": "硬盘加电时间",
+      "now_value": 96,
+      "raw_value": 240247585640259,
+      "str_value": "3907 (218 129 0)",
+      "health": "ok"
+    },
+    {
+      "id": 190,
+      "zh_cn": "气流温度",
+      "now_value": 74,
+      "raw_value": 521601050,
+      "str_value": "26 (Min/Max 23/31)",
+      "health": "ok"
+    },
+    {
+      "id": 194,
+      "zh_cn": "温度",
+      "now_value": 26,
+      "raw_value": 25769803802,
+      "str_value": "26 (0 6 0 0 0)",
+      "health": "ok"
+    }
+  ]
+}
