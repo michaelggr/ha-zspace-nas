@@ -70,6 +70,21 @@ class ZspaceCliClient:
         env.setdefault("LANG", "C.UTF-8")
         return env
 
+    def _ensure_executable(self) -> None:
+        """HACS/Samba 拷进来的二进制常丢执行位，这里自动补一次。"""
+        if not os.path.isfile(self._binary):
+            raise ZspaceUnavailableError("E_INSTALL", f"找不到可执行文件 {self._binary}")
+        if os.access(self._binary, os.X_OK):
+            return
+        try:
+            os.chmod(self._binary, 0o755)
+        except OSError as err:
+            raise ZspaceUnavailableError(
+                "E_INSTALL", f"{self._binary} 不可执行且自动修复失败：{err}"
+            ) from err
+        if not os.access(self._binary, os.X_OK):
+            raise ZspaceUnavailableError("E_INSTALL", f"{self._binary} 仍然不可执行")
+
     async def async_call(
         self,
         domain: str,
@@ -93,10 +108,7 @@ class ZspaceCliClient:
         else:
             assert_not_destructive(params)
 
-        if not os.path.isfile(self._binary):
-            raise ZspaceUnavailableError("E_INSTALL", f"找不到可执行文件 {self._binary}")
-        if not os.access(self._binary, os.X_OK):
-            raise ZspaceUnavailableError("E_INSTALL", f"{self._binary} 没有执行权限")
+        self._ensure_executable()
 
         argv = self._build_argv(domain, action, params)
         limit = timeout or self._timeout
