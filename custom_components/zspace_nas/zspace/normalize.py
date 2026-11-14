@@ -13,6 +13,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass, field
 
@@ -409,3 +410,43 @@ def normalize_downloads(raw: object) -> DownloadData:
         rate_up=as_bytes(raw.get("totalRateUpload")),
         names=names,
     )
+
+
+# ── 容器日志 ────────────────────────────────────────────
+_LOG_KEYS = ("text", "message", "log", "line", "msg", "content")
+
+
+def normalize_logs(raw: object) -> list[str]:
+    """`docker containers action=logs` 返回最近 100 行快照。
+
+    后端可能是字符串、字符串数组，也可能是 `{"logs": [...]}` 或对象数组，
+    这里统一成一行一个字符串的列表。
+    """
+    items: object = raw
+    if isinstance(raw, dict):
+        for key in ("logs", "list", "items", "data"):
+            if key in raw:
+                items = raw[key]
+                break
+        else:
+            items = []
+
+    if isinstance(items, str):
+        return [line for line in items.splitlines() if line.strip()]
+    if not isinstance(items, list):
+        return []
+
+    lines: list[str] = []
+    for item in items:
+        if isinstance(item, str):
+            lines.append(item)
+            continue
+        if isinstance(item, dict):
+            for key in _LOG_KEYS:
+                value = item.get(key)
+                if value is not None:
+                    lines.append(str(value))
+                    break
+            else:
+                lines.append(json.dumps(item, ensure_ascii=False))
+    return lines

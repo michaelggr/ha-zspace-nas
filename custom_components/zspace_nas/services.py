@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from datetime import datetime
 from typing import Any
 
 import voluptuous as vol
@@ -22,8 +23,10 @@ from .const import (
     ATTR_PARAMS,
     DOMAIN,
     SERVICE_CONTAINER_ACTION,
+    SERVICE_CONTAINER_LOGS,
     SERVICE_DUMP_RAW,
 )
+from .zspace.normalize import normalize_logs
 from .zspace import ZspaceError
 
 _LOGGER = logging.getLogger(__name__)
@@ -32,6 +35,14 @@ CONTAINER_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_CONTAINER_ID): cv.string,
         vol.Required(ATTR_ACTION): vol.In(ALLOWED_CONTAINER_ACTIONS),
+        vol.Optional("entry_id"): cv.string,
+    }
+)
+
+LOGS_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_CONTAINER_ID): cv.string,
+        vol.Optional("save", default=False): cv.boolean,
         vol.Optional("entry_id"): cv.string,
     }
 )
@@ -122,6 +133,52 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         supports_response=SupportsResponse.NONE,
     )
 
+    async def _handle_container_logs(call: ServiceCall) -> dict[str, Any]:
+        """返回容器最近日志；`save: true` 时同时落盘到 /config/zspace_nas/。"""
+        container_id = call.data[ATTR_CONTAINER_ID]
+        runtime = _find_runtime(hass, call.data.get("entry_id"), container_id)
+        if runtime is None:
+            raise ServiceValidationError(f"没找到容器 {container_id} 所属的极空间设备")
+
+        container = None
+        data = runtime.docker.data
+        for candidate in (data.containers if data else []):
+            if container_id in (candidate.id, candidate.short_id, candidate.name):
+                container = candidate
+                break
+        target = container.id if container else container_id
+        name = container.name if container else container_id
+
+        try:
+            raw = await runtime.client.async_call(
+                "docker", "containers", {"action": "logs", "container_id": target}
+            )
+        except ZspaceError as err:
+            raise ServiceValidationError(f"{err.code}: {err.message}") from err
+
+        lines = normalize_logs(raw)[-200:]
+        text = "\n".join(lines)
+        result: dict[str, Any] = {
+            "container_id": target,
+            "name": name,
+            "lines": len(lines),
+            "text": text,
+        }
+
+        if call.data.get("save"):
+            def _write() -> str:
+                directory = hass.config.path("zspace_nas")
+                os.makedirs(directory, exist_ok=True)
+                safe = "".join(ch if (ch.isalnum() or ch in "-_.") else "_" for ch in name)
+                path = os.path.join(directory, f"logs-{safe}-{datetime.now():%Y%m%d-%H%M%S}.log")
+                with open(path, "w", encoding="utf-8") as handle:
+                    handle.write(text)
+                return path
+
+            result["path"] = await hass.async_add_executor_job(_write)
+
+        return result
+
     async def _handle_dump_raw(call: ServiceCall) -> dict[str, Any]:
         """把某个能力调用的原始 JSON 落盘，用于核对字段结构。"""
         runtime = _first_runtime(hass, call.data.get("entry_id"))
@@ -148,6 +205,14 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         path = await hass.async_add_executor_job(_write)
         _LOGGER.info("原始数据已写入 %s", path)
         return {"path": path}
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_CONTAINER_LOGS,
+        _handle_container_logs,
+        schema=LOGS_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
 
     hass.services.async_register(
         DOMAIN,

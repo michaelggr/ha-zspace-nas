@@ -102,6 +102,17 @@ data:
 ```
 
 ```yaml
+service: zspace_nas.container_logs
+data:
+  container_id: qbittorrent     # 容器 ID、短 ID 或名称
+  save: true                    # 可选：同时写文件
+```
+
+日志是**最近 100 行的快照**（后端限制），不是实时流。开了 `save` 会落到
+`/config/zspace_nas/logs-<容器名>-<时间>.log`，方便下载或给自动化读取。
+响应里直接带 `text`，在「开发者工具 → 操作 → 查看响应」能看到。
+
+```yaml
 service: zspace_nas.dump_raw
 data:
   domain: storage

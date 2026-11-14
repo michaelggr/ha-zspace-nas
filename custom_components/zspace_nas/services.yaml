@@ -51,3 +51,27 @@ dump_raw:
       required: false
       selector:
         text:
+
+container_logs:
+  name: 容器日志
+  description: 返回容器最近 100 行日志；save 为 true 时同时写到 /config/zspace_nas/。
+  fields:
+    container_id:
+      name: 容器
+      description: 容器 ID、短 ID 或容器名称。
+      required: true
+      example: qbittorrent
+      selector:
+        text:
+    save:
+      name: 同时保存到文件
+      required: false
+      default: false
+      selector:
+        boolean:
+    entry_id:
+      name: 设备标识
+      description: 多台极空间时可指定，留空按容器自动匹配。
+      required: false
+      selector:
+        text:

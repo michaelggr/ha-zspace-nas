@@ -50,6 +50,7 @@ MAX_COOLDOWN = 600
 # ── 服务 ────────────────────────────────────────────────
 SERVICE_CONTAINER_ACTION = "container_action"
 SERVICE_DUMP_RAW = "dump_raw"
+SERVICE_CONTAINER_LOGS = "container_logs"
 
 ATTR_CONTAINER_ID = "container_id"
 ATTR_ACTION = "action"

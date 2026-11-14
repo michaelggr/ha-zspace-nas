@@ -17,6 +17,7 @@ sys.path.insert(0, str(_PKG))
 from zspace.normalize import (  # noqa: E402
     normalize_containers,
     normalize_disks,
+    normalize_logs,
     normalize_downloads,
     normalize_engine,
     normalize_smart,
@@ -159,6 +160,28 @@ class DownloadTest(unittest.TestCase):
 
     def test_active_names(self) -> None:
         self.assertEqual(self.data.names, ["ubuntu.iso"])
+
+
+class LogsTest(unittest.TestCase):
+    def test_plain_string(self) -> None:
+        self.assertEqual(normalize_logs("a\nb\n"), ["a", "b"])
+
+    def test_dict_with_string(self) -> None:
+        self.assertEqual(normalize_logs({"logs": "x\ny"}), ["x", "y"])
+
+    def test_dict_with_list(self) -> None:
+        self.assertEqual(normalize_logs({"logs": ["p", "q"]}), ["p", "q"])
+
+    def test_list_of_objects(self) -> None:
+        raw = [{"message": "m1"}, {"line": "l1"}, {"unknown": 1}]
+        lines = normalize_logs(raw)
+        self.assertEqual(lines[:2], ["m1", "l1"])
+        self.assertIn("unknown", lines[2])
+
+    def test_empty_shapes(self) -> None:
+        self.assertEqual(normalize_logs({}), [])
+        self.assertEqual(normalize_logs([]), [])
+        self.assertEqual(normalize_logs(None), [])
 
 
 if __name__ == "__main__":
