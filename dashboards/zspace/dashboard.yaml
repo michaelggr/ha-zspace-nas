@@ -5,27 +5,42 @@ views:
     path: overview
     icon: mdi:nas
     cards:
+      # 顶部信息条
       - type: markdown
         content: |
           {% set ents = integration_entities('zspace_nas') | expand | list %}
-          {% set ns = namespace(running=0, total=0, uptime='—') %}
+          {% set ns = namespace(running=0, total=0, uptime='—', cpu='—', alarm=0) %}
           {% for e in ents %}
             {% if '运行中' in e.name %}
               {% set ns.total = ns.total + 1 %}
               {% if e.state == 'on' %}{% set ns.running = ns.running + 1 %}{% endif %}
             {% endif %}
             {% if '运行时长' in e.name %}{% set ns.uptime = e.state %}{% endif %}
+            {% if 'CPU 使用率' in e.name %}{% set ns.cpu = e.state %}{% endif %}
+            {% if '健康' in e.name and e.state == 'on' %}{% set ns.alarm = ns.alarm + 1 %}{% endif %}
           {% endfor %}
-          ### 极空间 NAS
-          运行 {{ ns.uptime }} · 容器 **{{ ns.running }}/{{ ns.total }}** 在运行
+          <div style="display:flex;align-items:center;gap:14px;padding:2px">
+            <div style="width:46px;height:46px;border-radius:14px;flex:0 0 46px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(94,129,244,.28),rgba(94,129,244,.04));border:1px solid rgba(120,145,255,.18)">
+              <ha-icon icon="mdi:nas" style="color:#8fa7ff;--mdc-icon-size:24px"></ha-icon>
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:15px;font-weight:500;letter-spacing:.2px">极空间 NAS</div>
+              <div style="font-size:12px;color:var(--secondary-text-color);margin-top:2px">运行 {{ ns.uptime }} · 容器 {{ ns.running }}/{{ ns.total }} 在跑</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:11px;color:var(--secondary-text-color);letter-spacing:.6px">CPU</div>
+              <div style="font-size:19px;font-weight:500;line-height:1.2">{{ ns.cpu }}<span style="font-size:11px;color:var(--secondary-text-color)">%</span></div>
+            </div>
+            <div style="width:9px;height:9px;border-radius:50%;background:{% if ns.alarm %}var(--error-color){% else %}var(--success-color){% endif %};box-shadow:0 0 0 4px {% if ns.alarm %}rgba(219,68,55,.15){% else %}rgba(67,160,71,.15){% endif %}"></div>
+          </div>
 
+      # 指标磁贴
       - type: markdown
         content: |
           {% set ents = integration_entities('zspace_nas') | expand | list %}
-          {% set ns = namespace(cpu='—', mem='—', mem_used='—', temp='—', fan='—', rx=0, tx=0) %}
+          {% set ns = namespace(mem='—', mem_used='—', temp='—', fan='—', rx=0, tx=0) %}
           {% for e in ents %}
-            {% if 'CPU 使用率' in e.name %}{% set ns.cpu = e.state %}
-            {% elif '内存使用率' in e.name %}{% set ns.mem = e.state %}
+            {% if '内存使用率' in e.name %}{% set ns.mem = e.state %}
             {% elif '内存已用' in e.name %}{% set ns.mem_used = e.state %}
             {% elif 'CPU 温度' in e.name %}{% set ns.temp = e.state %}
             {% elif '风扇转速' in e.name %}{% set ns.fan = e.state %}
@@ -33,70 +48,100 @@ views:
             {% elif '网络发送' in e.name %}{% set ns.tx = e.state | float(0) %}
             {% endif %}
           {% endfor %}
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:14px;text-align:center">
-            <div><div style="font-size:12px;color:var(--secondary-text-color)">CPU</div><div style="font-size:24px;font-weight:500">{{ ns.cpu }}<span style="font-size:13px">%</span></div></div>
-            <div><div style="font-size:12px;color:var(--secondary-text-color)">内存</div><div style="font-size:24px;font-weight:500">{{ ns.mem }}<span style="font-size:13px">%</span></div><div style="font-size:11px;color:var(--secondary-text-color)">{{ ns.mem_used }} GiB</div></div>
-            <div><div style="font-size:12px;color:var(--secondary-text-color)">温度</div><div style="font-size:24px;font-weight:500">{{ ns.temp }}<span style="font-size:13px">℃</span></div></div>
-            <div><div style="font-size:12px;color:var(--secondary-text-color)">风扇</div><div style="font-size:24px;font-weight:500">{{ ns.fan }}</div><div style="font-size:11px;color:var(--secondary-text-color)">rpm</div></div>
-            <div><div style="font-size:12px;color:var(--secondary-text-color)">下行</div><div style="font-size:20px;font-weight:500">{{ (ns.rx / 1048576) | round(2) }}</div><div style="font-size:11px;color:var(--secondary-text-color)">MB/s</div></div>
-            <div><div style="font-size:12px;color:var(--secondary-text-color)">上行</div><div style="font-size:20px;font-weight:500">{{ (ns.tx / 1048576) | round(2) }}</div><div style="font-size:11px;color:var(--secondary-text-color)">MB/s</div></div>
+          {% set mem_pct = ns.mem | float(0) %}
+          {% set temp_v = ns.temp | float(0) %}
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
+            <div style="padding:12px 14px;border-radius:14px;background:rgba(94,129,244,.07);border:1px solid rgba(120,145,255,.16)">
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--secondary-text-color);letter-spacing:.6px">内存<span>GiB</span></div>
+              <div style="font-size:23px;font-weight:500;margin-top:6px">{{ ns.mem }}<span style="font-size:12px;color:var(--secondary-text-color)">%</span></div>
+              <div style="font-size:11px;color:var(--secondary-text-color);margin-bottom:8px">{% if ns.mem_used == '—' %}—{% else %}{{ ns.mem_used | float(0) | round(0) | int }} GiB 已用{% endif %}</div>
+              <div style="height:5px;border-radius:3px;background:rgba(255,255,255,.08)"><div style="height:5px;border-radius:3px;width:{{ [mem_pct, 100] | min }}%;background:#5e81f4"></div></div>
+            </div>
+            <div style="padding:12px 14px;border-radius:14px;background:rgba(255,167,38,.07);border:1px solid rgba(255,167,38,.18)">
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--secondary-text-color);letter-spacing:.6px">温度<span>℃</span></div>
+              <div style="font-size:23px;font-weight:500;margin-top:6px;color:{% if temp_v >= 70 %}var(--error-color){% elif temp_v >= 60 %}#ffa726{% else %}var(--primary-text-color){% endif %}">{% if ns.temp == '—' %}—{% else %}{{ temp_v | round(0) | int }}{% endif %}</div>
+              <div style="font-size:11px;color:var(--secondary-text-color);margin-bottom:8px">CPU 核心温度</div>
+              <div style="height:5px;border-radius:3px;background:rgba(255,255,255,.08)"><div style="height:5px;border-radius:3px;width:{{ [temp_v / 90 * 100, 100] | min }}%;background:#ffa726"></div></div>
+            </div>
+            <div style="padding:12px 14px;border-radius:14px;background:rgba(38,166,154,.07);border:1px solid rgba(38,166,154,.2)">
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--secondary-text-color);letter-spacing:.6px">风扇<span>rpm</span></div>
+              <div style="font-size:23px;font-weight:500;margin-top:6px">{% if ns.fan == '—' %}—{% else %}{{ ns.fan | float(0) | round(0) | int }}{% endif %}</div>
+              <div style="font-size:11px;color:var(--secondary-text-color)">CPU 散热</div>
+            </div>
+            <div style="padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)">
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--secondary-text-color);letter-spacing:.6px">网络<span>MB/s</span></div>
+              <div style="display:flex;gap:14px;margin-top:8px">
+                <div><div style="font-size:11px;color:var(--secondary-text-color)">↓</div><div style="font-size:17px;font-weight:500">{{ (ns.rx / 1048576) | round(2) }}</div></div>
+                <div><div style="font-size:11px;color:var(--secondary-text-color)">↑</div><div style="font-size:17px;font-weight:500">{{ (ns.tx / 1048576) | round(2) }}</div></div>
+              </div>
+            </div>
           </div>
 
+      # 存储池
       - type: markdown
         content: |
           {% set ents = integration_entities('zspace_nas') | expand | list %}
-          **存储池**
+          <div style="font-size:11px;color:var(--secondary-text-color);letter-spacing:1.2px;margin:2px 0 10px">存储池</div>
           {% for u in ents %}
             {% if '存储池' in u.name and u.name.endswith('使用率') %}
               {% set pool = u.name.split('存储池 ')[1].split(' 使用率')[0] %}
-              {% set ns = namespace(used='—', free='0') %}
+              {% set ns = namespace(used='0', free='0') %}
               {% for x in ents %}
                 {% if pool ~ ' 已用' in x.name %}{% set ns.used = x.state %}{% endif %}
                 {% if pool ~ ' 可用' in x.name %}{% set ns.free = x.state %}{% endif %}
               {% endfor %}
               {% set pct = u.state | float(0) %}
               {% set total = (ns.used | float(0)) + (ns.free | float(0)) %}
-          <div style="margin:10px 0">
-            <div style="display:flex;justify-content:space-between;font-size:13px">
-              <span>{{ pool }}</span>
-              <span style="color:var(--secondary-text-color)">{{ ns.used }} / {{ total | round(0) }} GiB · {{ u.state }}%</span>
+          <div style="margin-bottom:14px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:13px">
+              <span style="font-weight:500">{{ pool }}</span>
+              <span style="color:var(--secondary-text-color);font-size:12px">{{ ns.used | float(0) | round(0) | int }} / {{ total | round(0) | int }} GiB</span>
             </div>
-            <div style="height:6px;background:var(--divider-color);border-radius:3px;margin-top:5px">
-              <div style="height:6px;width:{{ [pct, 100] | min }}%;border-radius:3px;background:{% if pct > 85 %}var(--error-color){% elif pct > 70 %}var(--warning-color){% else %}var(--primary-color){% endif %}"></div>
+            <div style="height:8px;border-radius:5px;background:rgba(255,255,255,.08);margin-top:7px;overflow:hidden">
+              <div style="height:8px;border-radius:5px;width:{{ [pct, 100] | min }}%;background:{% if pct > 85 %}linear-gradient(90deg,#e05b52,#db4437){% elif pct > 70 %}linear-gradient(90deg,#ffc046,#ff9800){% else %}linear-gradient(90deg,#5e81f4,#7f77dd){% endif %}"></div>
             </div>
+            <div style="font-size:11px;color:var(--secondary-text-color);margin-top:4px">{{ u.state }}% 已用</div>
           </div>
             {% endif %}
           {% endfor %}
 
+      # 磁盘
       - type: markdown
         content: |
           {% set ents = integration_entities('zspace_nas') | expand | list %}
-          **磁盘**
-          <table style="width:100%;font-size:13px;border-collapse:collapse">
-          <tr style="color:var(--secondary-text-color);font-size:12px;text-align:left">
-            <th style="font-weight:400;padding:4px 0">盘位</th><th style="font-weight:400">温度</th>
-            <th style="font-weight:400">通电</th><th style="font-weight:400">重映射</th><th style="font-weight:400">健康</th>
+          <div style="font-size:11px;color:var(--secondary-text-color);letter-spacing:1.2px;margin:2px 0 8px">磁盘</div>
+          <table style="width:100%;font-size:12px;border-collapse:collapse">
+          <tr style="color:var(--secondary-text-color);font-size:11px;text-align:left">
+            <th style="font-weight:400;padding:0 0 6px">盘位</th>
+            <th style="font-weight:400">温度</th>
+            <th style="font-weight:400">通电</th>
+            <th style="font-weight:400">重映射</th>
+            <th style="font-weight:400;text-align:right">状态</th>
           </tr>
           {% for t in ents %}
             {% if '磁盘' in t.name and t.name.endswith('温度') %}
               {% set dev = t.name.split('磁盘 ')[1].split(' 温度')[0] %}
-              {% set ns = namespace(poh='—', realloc='—', health='off') %}
+              {% set ns = namespace(poh='0', realloc='0', health='off') %}
               {% for x in ents %}
                 {% if dev ~ ' 通电时间' in x.name %}{% set ns.poh = x.state %}{% endif %}
                 {% if dev ~ ' 重映射扇区' in x.name %}{% set ns.realloc = x.state %}{% endif %}
                 {% if dev ~ ' 健康' in x.name %}{% set ns.health = x.state %}{% endif %}
               {% endfor %}
-          <tr style="border-top:1px solid var(--divider-color)">
-            <td style="padding:6px 0">{{ dev }}</td>
-            <td>{{ t.state }}℃</td>
-            <td>{{ ns.poh }} h</td>
-            <td>{{ ns.realloc }}</td>
-            <td>{% if ns.health == 'on' %}<span style="color:var(--error-color)">异常</span>{% else %}<span style="color:var(--success-color)">正常</span>{% endif %}</td>
+              {% set tv = t.state | float(0) %}
+              {% set poh_v = ns.poh | float(0) %}
+              {% set years = (poh_v / 8760) | round(1) %}
+          <tr style="border-top:1px solid rgba(255,255,255,.07)">
+            <td style="padding:9px 0;font-weight:500">{{ dev }}</td>
+            <td><span style="padding:2px 8px;border-radius:8px;font-size:11px;background:{% if tv >= 50 %}rgba(224,91,82,.16){% elif tv >= 40 %}rgba(255,152,0,.16){% else %}rgba(38,166,154,.16){% endif %};color:{% if tv >= 50 %}var(--error-color){% elif tv >= 40 %}#ffa726{% else %}var(--success-color){% endif %}">{{ tv | round(0) | int }}℃</span></td>
+            <td style="color:var(--secondary-text-color)">{% if poh_v < 8760 %}{{ (poh_v / 24) | round(0) | int }} 天{% else %}{{ years }} 年{% endif %}</td>
+            <td style="color:{% if (ns.realloc | int(0)) > 0 %}#ffa726{% else %}var(--secondary-text-color){% endif %}">{{ ns.realloc }}</td>
+            <td style="text-align:right">{% if ns.health == 'on' %}<span style="color:var(--error-color)">异常</span>{% else %}<span style="color:var(--success-color)">正常</span>{% endif %}</td>
           </tr>
             {% endif %}
           {% endfor %}
           </table>
 
+      # 下载
       - type: markdown
         content: |
           {% set ents = integration_entities('zspace_nas') | expand | list %}
@@ -106,7 +151,20 @@ views:
             {% if '下载速度' in e.name %}{% set ns.rate = e.state | float(0) %}{% endif %}
             {% if '做种任务' in e.name %}{% set ns.seed = e.state %}{% endif %}
           {% endfor %}
-          下载任务 **{{ ns.active }}** 个 · 做种 **{{ ns.seed }}** · 速度 {{ (ns.rate / 1048576) | round(2) }} MB/s
+          <div style="display:flex;gap:10px">
+            <div style="flex:1;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)">
+              <div style="font-size:11px;color:var(--secondary-text-color)">下载任务</div>
+              <div style="font-size:19px;font-weight:500;margin-top:2px">{{ ns.active }}</div>
+            </div>
+            <div style="flex:1;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)">
+              <div style="font-size:11px;color:var(--secondary-text-color)">做种</div>
+              <div style="font-size:19px;font-weight:500;margin-top:2px">{{ ns.seed }}</div>
+            </div>
+            <div style="flex:1;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)">
+              <div style="font-size:11px;color:var(--secondary-text-color)">速度 MB/s</div>
+              <div style="font-size:19px;font-weight:500;margin-top:2px">{{ (ns.rate / 1048576) | round(2) }}</div>
+            </div>
+          </div>
 
   # ── 容器 ─────────────────────────────────────────────
   - title: 容器
@@ -123,8 +181,15 @@ views:
               {% if e.state == 'on' %}{% set ns.running = ns.running + 1 %}{% endif %}
             {% endif %}
           {% endfor %}
-          ### 容器 {{ ns.running }} / {{ ns.total }}
-          开关受白名单控制：只有「允许控制的容器」里命中的才会出现，删除类操作不开放。
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(38,166,154,.28),rgba(38,166,154,.04));border:1px solid rgba(38,166,154,.2)">
+              <ha-icon icon="mdi:docker" style="color:#4dd0c4;--mdc-icon-size:22px"></ha-icon>
+            </div>
+            <div style="flex:1">
+              <div style="font-size:15px;font-weight:500">容器 {{ ns.running }} / {{ ns.total }}</div>
+              <div style="font-size:12px;color:var(--secondary-text-color)">开关受白名单控制，删除类操作不开放</div>
+            </div>
+          </div>
 
       - type: custom:auto-entities
         card:
@@ -228,8 +293,12 @@ views:
             {% elif e.domain == 'button' %}{% set ns.button = ns.button + 1 %}
             {% else %}{% set ns.other = ns.other + 1 %}{% endif %}
           {% endfor %}
-          ### 全部实体
-          传感器 **{{ ns.sensor }}** · 二进制 **{{ ns.binary }}** · 开关 **{{ ns.switch }}** · 按钮 **{{ ns.button }}**{% if ns.other %} · 其它 {{ ns.other }}{% endif %}
+          <div style="display:flex;gap:8px;flex-wrap:wrap;font-size:12px">
+            <span style="padding:4px 10px;border-radius:999px;background:rgba(94,129,244,.12);border:1px solid rgba(120,145,255,.18)">传感器 {{ ns.sensor }}</span>
+            <span style="padding:4px 10px;border-radius:999px;background:rgba(38,166,154,.12);border:1px solid rgba(38,166,154,.18)">二进制 {{ ns.binary }}</span>
+            <span style="padding:4px 10px;border-radius:999px;background:rgba(255,167,38,.12);border:1px solid rgba(255,167,38,.18)">开关 {{ ns.switch }}</span>
+            <span style="padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08)">按钮 {{ ns.button }}</span>
+          </div>
 
       - type: custom:auto-entities
         card:
