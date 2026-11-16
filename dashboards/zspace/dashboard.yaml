@@ -1,339 +1,454 @@
 title: 极空间
 views:
-  # ── 概览 ─────────────────────────────────────────────
-  - title: 概览
-    path: overview
-    icon: mdi:nas
+- title: 概览
+  path: overview
+  icon: mdi:nas
+  type: sections
+  max_columns: 2
+  sections:
+  - type: grid
     cards:
-      # 顶部信息条
-      - type: markdown
-        content: |
-          {% set ents = integration_entities('zspace_nas') | expand | list %}
-          {% set ns = namespace(running=0, total=0, uptime='—', cpu='—', alarm=0) %}
-          {% for e in ents %}
-            {% if '运行中' in e.name %}
-              {% set ns.total = ns.total + 1 %}
-              {% if e.state == 'on' %}{% set ns.running = ns.running + 1 %}{% endif %}
-            {% endif %}
-            {% if '运行时长' in e.name %}{% set ns.uptime = e.state %}{% endif %}
-            {% if 'CPU 使用率' in e.name %}{% set ns.cpu = e.state %}{% endif %}
-            {% if '健康' in e.name and e.state == 'on' %}{% set ns.alarm = ns.alarm + 1 %}{% endif %}
-          {% endfor %}
-          <div style="display:flex;align-items:center;gap:14px;padding:2px">
-            <div style="width:46px;height:46px;border-radius:14px;flex:0 0 46px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(94,129,244,.28),rgba(94,129,244,.04));border:1px solid rgba(120,145,255,.18)">
-              <ha-icon icon="mdi:nas" style="color:#8fa7ff;--mdc-icon-size:24px"></ha-icon>
-            </div>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:15px;font-weight:500;letter-spacing:.2px">极空间 NAS</div>
-              <div style="font-size:12px;color:var(--secondary-text-color);margin-top:2px">运行 {{ ns.uptime }} · 容器 {{ ns.running }}/{{ ns.total }} 在跑</div>
-            </div>
-            <div style="text-align:right">
-              <div style="font-size:11px;color:var(--secondary-text-color);letter-spacing:.6px">CPU</div>
-              <div style="font-size:19px;font-weight:500;line-height:1.2">{{ ns.cpu }}<span style="font-size:11px;color:var(--secondary-text-color)">%</span></div>
-            </div>
-            <div style="width:9px;height:9px;border-radius:50%;background:{% if ns.alarm %}var(--error-color){% else %}var(--success-color){% endif %};box-shadow:0 0 0 4px {% if ns.alarm %}rgba(219,68,55,.15){% else %}rgba(67,160,71,.15){% endif %}"></div>
-          </div>
-
-      # 指标磁贴
-      - type: markdown
-        content: |
-          {% set ents = integration_entities('zspace_nas') | expand | list %}
-          {% set ns = namespace(mem='—', mem_used='—', temp='—', fan='—', rx=0, tx=0) %}
-          {% for e in ents %}
-            {% if '内存使用率' in e.name %}{% set ns.mem = e.state %}
-            {% elif '内存已用' in e.name %}{% set ns.mem_used = e.state %}
-            {% elif 'CPU 温度' in e.name %}{% set ns.temp = e.state %}
-            {% elif '风扇转速' in e.name %}{% set ns.fan = e.state %}
-            {% elif '网络接收' in e.name %}{% set ns.rx = e.state | float(0) %}
-            {% elif '网络发送' in e.name %}{% set ns.tx = e.state | float(0) %}
-            {% endif %}
-          {% endfor %}
-          {% set mem_pct = ns.mem | float(0) %}
-          {% set temp_v = ns.temp | float(0) %}
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
-            <div style="padding:12px 14px;border-radius:14px;background:rgba(94,129,244,.07);border:1px solid rgba(120,145,255,.16)">
-              <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--secondary-text-color);letter-spacing:.6px">内存<span>GiB</span></div>
-              <div style="font-size:23px;font-weight:500;margin-top:6px">{{ ns.mem }}<span style="font-size:12px;color:var(--secondary-text-color)">%</span></div>
-              <div style="font-size:11px;color:var(--secondary-text-color);margin-bottom:8px">{% if ns.mem_used == '—' %}—{% else %}{{ ns.mem_used | float(0) | round(0) | int }} GiB 已用{% endif %}</div>
-              <div style="height:5px;border-radius:3px;background:rgba(255,255,255,.08)"><div style="height:5px;border-radius:3px;width:{{ [mem_pct, 100] | min }}%;background:#5e81f4"></div></div>
-            </div>
-            <div style="padding:12px 14px;border-radius:14px;background:rgba(255,167,38,.07);border:1px solid rgba(255,167,38,.18)">
-              <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--secondary-text-color);letter-spacing:.6px">温度<span>℃</span></div>
-              <div style="font-size:23px;font-weight:500;margin-top:6px;color:{% if temp_v >= 70 %}var(--error-color){% elif temp_v >= 60 %}#ffa726{% else %}var(--primary-text-color){% endif %}">{% if ns.temp == '—' %}—{% else %}{{ temp_v | round(0) | int }}{% endif %}</div>
-              <div style="font-size:11px;color:var(--secondary-text-color);margin-bottom:8px">CPU 核心温度</div>
-              <div style="height:5px;border-radius:3px;background:rgba(255,255,255,.08)"><div style="height:5px;border-radius:3px;width:{{ [temp_v / 90 * 100, 100] | min }}%;background:#ffa726"></div></div>
-            </div>
-            <div style="padding:12px 14px;border-radius:14px;background:rgba(38,166,154,.07);border:1px solid rgba(38,166,154,.2)">
-              <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--secondary-text-color);letter-spacing:.6px">风扇<span>rpm</span></div>
-              <div style="font-size:23px;font-weight:500;margin-top:6px">{% if ns.fan == '—' %}—{% else %}{{ ns.fan | float(0) | round(0) | int }}{% endif %}</div>
-              <div style="font-size:11px;color:var(--secondary-text-color)">CPU 散热</div>
-            </div>
-            <div style="padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)">
-              <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--secondary-text-color);letter-spacing:.6px">网络<span>MB/s</span></div>
-              <div style="display:flex;gap:14px;margin-top:8px">
-                <div><div style="font-size:11px;color:var(--secondary-text-color)">↓</div><div style="font-size:17px;font-weight:500">{{ (ns.rx / 1048576) | round(2) }}</div></div>
-                <div><div style="font-size:11px;color:var(--secondary-text-color)">↑</div><div style="font-size:17px;font-weight:500">{{ (ns.tx / 1048576) | round(2) }}</div></div>
-              </div>
-            </div>
-          </div>
-
-      # 存储池
-      - type: markdown
-        content: |
-          {% set ents = integration_entities('zspace_nas') | expand | list %}
-          <div style="font-size:11px;color:var(--secondary-text-color);letter-spacing:1.2px;margin:2px 0 10px">存储池</div>
-          {% for u in ents %}
-            {% if '存储池' in u.name and u.name.endswith('使用率') %}
-              {% set pool = u.name.split('存储池 ')[1].split(' 使用率')[0] %}
-              {% set ns = namespace(used='0', free='0') %}
-              {% for x in ents %}
-                {% if pool ~ ' 已用' in x.name %}{% set ns.used = x.state %}{% endif %}
-                {% if pool ~ ' 可用' in x.name %}{% set ns.free = x.state %}{% endif %}
-              {% endfor %}
-              {% set pct = u.state | float(0) %}
-              {% set total = (ns.used | float(0)) + (ns.free | float(0)) %}
-          <div style="margin-bottom:14px">
-            <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:13px">
-              <span style="font-weight:500">{{ pool }}</span>
-              <span style="color:var(--secondary-text-color);font-size:12px">{{ ns.used | float(0) | round(0) | int }} / {{ total | round(0) | int }} GiB</span>
-            </div>
-            <div style="height:8px;border-radius:5px;background:rgba(255,255,255,.08);margin-top:7px;overflow:hidden">
-              <div style="height:8px;border-radius:5px;width:{{ [pct, 100] | min }}%;background:{% if pct > 85 %}linear-gradient(90deg,#e05b52,#db4437){% elif pct > 70 %}linear-gradient(90deg,#ffc046,#ff9800){% else %}linear-gradient(90deg,#5e81f4,#7f77dd){% endif %}"></div>
-            </div>
-            <div style="font-size:11px;color:var(--secondary-text-color);margin-top:4px">{{ u.state }}% 已用</div>
-          </div>
-            {% endif %}
-          {% endfor %}
-
-      # 磁盘
-      - type: markdown
-        content: |
-          {% set ents = integration_entities('zspace_nas') | expand | list %}
-          <div style="font-size:11px;color:var(--secondary-text-color);letter-spacing:1.2px;margin:2px 0 8px">磁盘</div>
-          <table style="width:100%;font-size:12px;border-collapse:collapse">
-          <tr style="color:var(--secondary-text-color);font-size:11px;text-align:left">
-            <th style="font-weight:400;padding:0 0 6px">盘位</th>
-            <th style="font-weight:400">温度</th>
-            <th style="font-weight:400">通电</th>
-            <th style="font-weight:400">重映射</th>
-            <th style="font-weight:400;text-align:right">状态</th>
-          </tr>
-          {% for t in ents %}
-            {% if '磁盘' in t.name and t.name.endswith('温度') %}
-              {% set dev = t.name.split('磁盘 ')[1].split(' 温度')[0] %}
-              {% set ns = namespace(poh='0', realloc='0', health='off') %}
-              {% for x in ents %}
-                {% if dev ~ ' 通电时间' in x.name %}{% set ns.poh = x.state %}{% endif %}
-                {% if dev ~ ' 重映射扇区' in x.name %}{% set ns.realloc = x.state %}{% endif %}
-                {% if dev ~ ' 健康' in x.name %}{% set ns.health = x.state %}{% endif %}
-              {% endfor %}
-              {% set tv = t.state | float(0) %}
-              {% set poh_v = ns.poh | float(0) %}
-              {% set years = (poh_v / 8760) | round(1) %}
-          <tr style="border-top:1px solid rgba(255,255,255,.07)">
-            <td style="padding:9px 0;font-weight:500">{{ dev }}</td>
-            <td><span style="padding:2px 8px;border-radius:8px;font-size:11px;background:{% if tv >= 50 %}rgba(224,91,82,.16){% elif tv >= 40 %}rgba(255,152,0,.16){% else %}rgba(38,166,154,.16){% endif %};color:{% if tv >= 50 %}var(--error-color){% elif tv >= 40 %}#ffa726{% else %}var(--success-color){% endif %}">{{ tv | round(0) | int }}℃</span></td>
-            <td style="color:var(--secondary-text-color)">{% if poh_v < 8760 %}{{ (poh_v / 24) | round(0) | int }} 天{% else %}{{ years }} 年{% endif %}</td>
-            <td style="color:{% if (ns.realloc | int(0)) > 0 %}#ffa726{% else %}var(--secondary-text-color){% endif %}">{{ ns.realloc }}</td>
-            <td style="text-align:right">{% if ns.health == 'on' %}<span style="color:var(--error-color)">异常</span>{% else %}<span style="color:var(--success-color)">正常</span>{% endif %}</td>
-          </tr>
-            {% endif %}
-          {% endfor %}
-          </table>
-
-      # 下载
-      - type: markdown
-        content: |
-          {% set ents = integration_entities('zspace_nas') | expand | list %}
-          {% set ns = namespace(active='0', rate=0, seed='0') %}
-          {% for e in ents %}
-            {% if '下载任务' in e.name %}{% set ns.active = e.state %}{% endif %}
-            {% if '下载速度' in e.name %}{% set ns.rate = e.state | float(0) %}{% endif %}
-            {% if '做种任务' in e.name %}{% set ns.seed = e.state %}{% endif %}
-          {% endfor %}
-          <div style="display:flex;gap:10px">
-            <div style="flex:1;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)">
-              <div style="font-size:11px;color:var(--secondary-text-color)">下载任务</div>
-              <div style="font-size:19px;font-weight:500;margin-top:2px">{{ ns.active }}</div>
-            </div>
-            <div style="flex:1;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)">
-              <div style="font-size:11px;color:var(--secondary-text-color)">做种</div>
-              <div style="font-size:19px;font-weight:500;margin-top:2px">{{ ns.seed }}</div>
-            </div>
-            <div style="flex:1;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)">
-              <div style="font-size:11px;color:var(--secondary-text-color)">速度 MB/s</div>
-              <div style="font-size:19px;font-weight:500;margin-top:2px">{{ (ns.rate / 1048576) | round(2) }}</div>
-            </div>
-          </div>
-
-  # ── 容器 ─────────────────────────────────────────────
-  - title: 容器
-    path: containers
-    icon: mdi:docker
+    - type: heading
+      heading: 系统
+      icon: mdi:chip
+    - type: custom:mushroom-entity-card
+      entity: sensor.ji_kong_jian_z4pro_cpu_shi_yong_lu
+      name: CPU 使用率
+      icon: mdi:cpu-64-bit
+      icon_color: blue
+      layout: vertical
+      grid_options:
+        columns: 6
+    - type: custom:mushroom-entity-card
+      entity: sensor.ji_kong_jian_z4pro_nei_cun_shi_yong_lu
+      name: 内存使用率
+      icon: mdi:memory
+      icon_color: teal
+      layout: vertical
+      grid_options:
+        columns: 6
+    - type: custom:mushroom-entity-card
+      entity: sensor.ji_kong_jian_z4pro_cpu_wen_du
+      name: CPU 温度
+      icon: mdi:thermometer
+      icon_color: orange
+      layout: vertical
+      grid_options:
+        columns: 6
+    - type: custom:mushroom-entity-card
+      entity: sensor.ji_kong_jian_z4pro_feng_shan_zhuan_su
+      name: 风扇转速
+      icon: mdi:fan
+      icon_color: purple
+      layout: vertical
+      grid_options:
+        columns: 6
+    - type: markdown
+      content: "{% set ns = namespace(on=0, off=0, bad=0, disk=0) -%} {% for s in integration_entities('zspace_nas') | expand -%}\n  {% if s.domain == 'switch' -%}\n    {% if s.state == 'on' %}{% set ns.on\
+        \ = ns.on + 1 %}{% else %}{% set ns.off = ns.off + 1 %}{% endif -%}\n  {% elif s.domain == 'binary_sensor' and '健康' in s.name -%}\n    {% set ns.disk = ns.disk + 1 -%}\n    {% if s.state == 'on'\
+        \ %}{% set ns.bad = ns.bad + 1 %}{% endif -%}\n  {% endif -%}\n{% endfor -%} 容器 **{{ ns.on }}** 运行 / **{{ ns.off }}** 停止 &nbsp;·&nbsp; 磁盘 **{{ ns.disk }}** 块{% if ns.bad %}，<font color=\"#ef5350\"\
+        >**{{ ns.bad }}** 块异常</font>{% else %}，全部健康{% endif %}"
+      grid_options:
+        columns: 12
+    - type: heading
+      heading: 存储
+      icon: mdi:harddisk
+    - type: custom:bar-card
+      entities:
+      - entity: sensor.ji_kong_jian_z4pro_cun_chu_chi_sata11_shi_yong_lu
+        name: sata11
+        icon: mdi:harddisk
+      - entity: sensor.ji_kong_jian_z4pro_cun_chu_chi_nvme12_shi_yong_lu
+        name: nvme12
+        icon: mdi:harddisk
+      - entity: sensor.ji_kong_jian_z4pro_cun_chu_chi_sata13_shi_yong_lu
+        name: sata13
+        icon: mdi:harddisk
+      max: 100
+      min: 0
+      height: 20
+      rounded: true
+      columns: 1
+      unit_of_measurement: '%'
+      severity:
+      - color: '#26a69a'
+        from: 0
+        to: 70
+      - color: '#ffb74d'
+        from: 70
+        to: 85
+      - color: '#ef5350'
+        from: 85
+        to: 100
+      positions:
+        icon: 'off'
+        indicator: inside
+        name: outside
+        value: outside
+      grid_options:
+        columns: 12
+    - type: custom:expander-card
+      title: 磁盘明细
+      expanded: false
+      padding: 8px
+      grid_options:
+        columns: 12
+      cards:
+      - type: entities
+        entities:
+        - type: custom:multiple-entity-row
+          entity: sensor.ji_kong_jian_z4pro_ci_pan_sda_wen_du
+          name: sda
+          unit: ℃
+          entities:
+          - entity: sensor.ji_kong_jian_z4pro_ci_pan_sda_tong_dian_shi_jian
+            name: 通电
+            unit: h
+          - entity: sensor.ji_kong_jian_z4pro_ci_pan_sda_zhong_ying_she_shan_qu
+            name: 重映射
+        - type: custom:multiple-entity-row
+          entity: sensor.ji_kong_jian_z4pro_ci_pan_sdb_wen_du
+          name: sdb
+          unit: ℃
+          entities:
+          - entity: sensor.ji_kong_jian_z4pro_ci_pan_sdb_tong_dian_shi_jian
+            name: 通电
+            unit: h
+          - entity: sensor.ji_kong_jian_z4pro_ci_pan_sdb_zhong_ying_she_shan_qu
+            name: 重映射
+        - type: custom:multiple-entity-row
+          entity: sensor.ji_kong_jian_z4pro_ci_pan_sdc_wen_du
+          name: sdc
+          unit: ℃
+          entities:
+          - entity: sensor.ji_kong_jian_z4pro_ci_pan_sdc_tong_dian_shi_jian
+            name: 通电
+            unit: h
+          - entity: sensor.ji_kong_jian_z4pro_ci_pan_sdc_zhong_ying_she_shan_qu
+            name: 重映射
+  - type: grid
     cards:
-      - type: markdown
-        content: |
-          {% set ents = integration_entities('zspace_nas') | expand | list %}
-          {% set ns = namespace(running=0, total=0) %}
-          {% for e in ents %}
-            {% if '运行中' in e.name %}
-              {% set ns.total = ns.total + 1 %}
-              {% if e.state == 'on' %}{% set ns.running = ns.running + 1 %}{% endif %}
-            {% endif %}
-          {% endfor %}
-          <div style="display:flex;align-items:center;gap:12px">
-            <div style="width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(38,166,154,.28),rgba(38,166,154,.04));border:1px solid rgba(38,166,154,.2)">
-              <ha-icon icon="mdi:docker" style="color:#4dd0c4;--mdc-icon-size:22px"></ha-icon>
-            </div>
-            <div style="flex:1">
-              <div style="font-size:15px;font-weight:500">容器 {{ ns.running }} / {{ ns.total }}</div>
-              <div style="font-size:12px;color:var(--secondary-text-color)">开关受白名单控制，删除类操作不开放</div>
-            </div>
-          </div>
-
-      - type: custom:auto-entities
-        card:
-          type: entities
-          title: 运行中
-          state_color: true
-        filter:
-          include:
-            - integration: zspace_nas
-              domain: switch
-              state: "on"
-        sort:
-          method: friendly_name
-
-      - type: custom:auto-entities
-        card:
-          type: entities
-          title: 已停止
-          state_color: true
-        filter:
-          include:
-            - integration: zspace_nas
-              domain: switch
-              state: "off"
-        sort:
-          method: friendly_name
-
-      - type: custom:auto-entities
-        card:
-          type: glance
-          title: 磁盘健康
-          columns: 3
-        filter:
-          include:
-            - integration: zspace_nas
-              domain: binary_sensor
-              attributes:
-                device_class: problem
-
-  # ── 趋势 ─────────────────────────────────────────────
-  - title: 趋势
-    path: trends
-    icon: mdi:chart-line
+    - type: heading
+      heading: 网络
+      icon: mdi:swap-vertical
+    - type: custom:apexcharts-card
+      graph_span: 6h
+      update_interval: 1min
+      header:
+        title: 吞吐（MB/s）
+        show: true
+        show_states: true
+        colorize_states: true
+      series:
+      - entity: sensor.ji_kong_jian_z4pro_wang_luo_jie_shou
+        name: 下行
+        type: area
+        curve: smooth
+        stroke_width: 2
+        transform: return Number(x) / 1048576;
+        unit: MB/s
+        color: '#42a5f5'
+      - entity: sensor.ji_kong_jian_z4pro_wang_luo_fa_song
+        name: 上行
+        type: area
+        curve: smooth
+        stroke_width: 2
+        transform: return Number(x) / 1048576;
+        unit: MB/s
+        color: '#ab47bc'
+      yaxis:
+      - decimals: 1
+        apex_config:
+          tickAmount: 4
+      apex_config:
+        chart:
+          height: 180
+        legend:
+          show: true
+          position: top
+        grid:
+          strokeDashArray: 3
+      grid_options:
+        columns: 12
+    - type: heading
+      heading: 下载
+      icon: mdi:download
+    - type: entities
+      entities:
+      - entity: sensor.ji_kong_jian_z4pro_xia_zai_ren_wu
+        name: 进行中
+        icon: mdi:progress-download
+      - entity: sensor.ji_kong_jian_z4pro_zuo_chong_ren_wu
+        name: 做种
+        icon: mdi:seed
+      - entity: sensor.ji_kong_jian_z4pro_xia_zai_su_du
+        name: 下载速度
+        icon: mdi:speedometer
+      grid_options:
+        columns: 12
+- title: 容器
+  path: containers
+  icon: mdi:docker
+  type: sections
+  max_columns: 2
+  sections:
+  - type: grid
     cards:
-      - type: markdown
-        content: |
-          下面两张卡需要 `auto-entities`（HACS → 前端 → 搜 auto-entities）。
-          没装的话会显示成红色报错，装上并刷新即可。
-
-      - type: custom:auto-entities
-        card:
-          type: statistics-graph
-          title: CPU / 内存 / 存储池使用率
-          chart_type: line
-          period: hour
-          days_to_show: 2
-          stat_types:
-            - mean
-          hide_legend: false
-        filter:
-          include:
-            - integration: zspace_nas
-              domain: sensor
-              attributes:
-                unit_of_measurement: "%"
-        sort:
-          method: friendly_name
-
-      - type: custom:auto-entities
-        card:
-          type: statistics-graph
-          title: 网络收发（B/s）
-          chart_type: line
-          period: hour
-          days_to_show: 1
-          stat_types:
-            - mean
-          hide_legend: false
-        filter:
-          include:
-            - integration: zspace_nas
-              domain: sensor
-              attributes:
-                device_class: data_rate
-        sort:
-          method: friendly_name
-
-  # ── 全部实体 ─────────────────────────────────────────
-  - title: 全部实体
-    path: all
-    icon: mdi:format-list-bulleted
+    - type: heading
+      heading: 运行中
+      icon: mdi:play-circle
+    - type: custom:auto-entities
+      card:
+        type: grid
+        columns: 3
+        square: false
+      card_param: cards
+      filter:
+        include:
+        - domain: switch
+          integration: zspace_nas
+          state: 'on'
+          options:
+            type: custom:mushroom-entity-card
+            layout: vertical
+            icon_color: green
+            tap_action:
+              action: toggle
+            hold_action:
+              action: more-info
+      sort:
+        method: name
+        ignore_case: true
+  - type: grid
     cards:
-      - type: markdown
-        content: |
-          {% set ents = integration_entities('zspace_nas') | expand | list %}
-          {% set ns = namespace(sensor=0, binary=0, switch=0, button=0, other=0) %}
-          {% for e in ents %}
-            {% if e.domain == 'sensor' %}{% set ns.sensor = ns.sensor + 1 %}
-            {% elif e.domain == 'binary_sensor' %}{% set ns.binary = ns.binary + 1 %}
-            {% elif e.domain == 'switch' %}{% set ns.switch = ns.switch + 1 %}
-            {% elif e.domain == 'button' %}{% set ns.button = ns.button + 1 %}
-            {% else %}{% set ns.other = ns.other + 1 %}{% endif %}
-          {% endfor %}
-          <div style="display:flex;gap:8px;flex-wrap:wrap;font-size:12px">
-            <span style="padding:4px 10px;border-radius:999px;background:rgba(94,129,244,.12);border:1px solid rgba(120,145,255,.18)">传感器 {{ ns.sensor }}</span>
-            <span style="padding:4px 10px;border-radius:999px;background:rgba(38,166,154,.12);border:1px solid rgba(38,166,154,.18)">二进制 {{ ns.binary }}</span>
-            <span style="padding:4px 10px;border-radius:999px;background:rgba(255,167,38,.12);border:1px solid rgba(255,167,38,.18)">开关 {{ ns.switch }}</span>
-            <span style="padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08)">按钮 {{ ns.button }}</span>
-          </div>
-
-      - type: custom:auto-entities
-        card:
-          type: entities
-          title: 传感器
-          state_color: true
-        filter:
-          include:
-            - integration: zspace_nas
-              domain: sensor
-        sort:
-          method: friendly_name
-
-      - type: custom:auto-entities
-        card:
-          type: entities
-          title: 二进制传感器
-          state_color: true
-        filter:
-          include:
-            - integration: zspace_nas
-              domain: binary_sensor
-        sort:
-          method: friendly_name
-
-      - type: custom:auto-entities
-        card:
-          type: entities
-          title: 开关与按钮
-          state_color: true
-        filter:
-          include:
-            - integration: zspace_nas
-              domain: switch
-            - integration: zspace_nas
-              domain: button
-        sort:
-          method: friendly_name
+    - type: heading
+      heading: 已停止
+      icon: mdi:stop-circle
+    - type: custom:auto-entities
+      card:
+        type: grid
+        columns: 3
+        square: false
+      card_param: cards
+      filter:
+        include:
+        - domain: switch
+          integration: zspace_nas
+          state: 'off'
+          options:
+            type: custom:mushroom-entity-card
+            layout: vertical
+            icon_color: disabled
+            tap_action:
+              action: toggle
+            hold_action:
+              action: more-info
+      sort:
+        method: name
+        ignore_case: true
+- title: 趋势
+  path: trends
+  icon: mdi:chart-timeline-variant
+  type: sections
+  max_columns: 2
+  sections:
+  - type: grid
+    cards:
+    - type: custom:apexcharts-card
+      graph_span: 24h
+      header:
+        title: CPU 与内存
+        show: true
+        show_states: true
+        colorize_states: true
+      series:
+      - entity: sensor.ji_kong_jian_z4pro_cpu_shi_yong_lu
+        name: CPU
+        type: line
+        curve: smooth
+        stroke_width: 2
+        color: '#42a5f5'
+      - entity: sensor.ji_kong_jian_z4pro_nei_cun_shi_yong_lu
+        name: 内存
+        type: line
+        curve: smooth
+        stroke_width: 2
+        color: '#26a69a'
+      yaxis:
+      - decimals: 1
+        min: 0
+        apex_config:
+          tickAmount: 5
+      apex_config:
+        chart:
+          height: 230
+        legend:
+          show: false
+        grid:
+          strokeDashArray: 3
+    - type: custom:apexcharts-card
+      graph_span: 24h
+      header:
+        title: 存储池使用率
+        show: true
+        show_states: true
+        colorize_states: true
+      series:
+      - entity: sensor.ji_kong_jian_z4pro_cun_chu_chi_sata11_shi_yong_lu
+        name: sata11
+        type: line
+        curve: smooth
+        stroke_width: 2
+        color: '#42a5f5'
+      - entity: sensor.ji_kong_jian_z4pro_cun_chu_chi_nvme12_shi_yong_lu
+        name: nvme12
+        type: line
+        curve: smooth
+        stroke_width: 2
+        color: '#26a69a'
+      - entity: sensor.ji_kong_jian_z4pro_cun_chu_chi_sata13_shi_yong_lu
+        name: sata13
+        type: line
+        curve: smooth
+        stroke_width: 2
+        color: '#ab47bc'
+      yaxis:
+      - decimals: 1
+        min: 0
+        max: 100
+        apex_config:
+          tickAmount: 5
+      apex_config:
+        chart:
+          height: 230
+        legend:
+          show: false
+        grid:
+          strokeDashArray: 3
+  - type: grid
+    cards:
+    - type: custom:apexcharts-card
+      graph_span: 24h
+      header:
+        title: 磁盘温度
+        show: true
+        show_states: true
+        colorize_states: true
+      series:
+      - entity: sensor.ji_kong_jian_z4pro_ci_pan_sda_wen_du
+        name: sda
+        type: line
+        curve: smooth
+        stroke_width: 2
+        color: '#42a5f5'
+      - entity: sensor.ji_kong_jian_z4pro_ci_pan_sdb_wen_du
+        name: sdb
+        type: line
+        curve: smooth
+        stroke_width: 2
+        color: '#ffb74d'
+      - entity: sensor.ji_kong_jian_z4pro_ci_pan_sdc_wen_du
+        name: sdc
+        type: line
+        curve: smooth
+        stroke_width: 2
+        color: '#26a69a'
+      yaxis:
+      - min: 20
+        max: 45
+        apex_config:
+          tickAmount: 4
+      apex_config:
+        chart:
+          height: 230
+        legend:
+          show: false
+        grid:
+          strokeDashArray: 3
+    - type: custom:apexcharts-card
+      graph_span: 24h
+      header:
+        title: 网络吞吐
+        show: true
+        show_states: true
+        colorize_states: true
+      series:
+      - entity: sensor.ji_kong_jian_z4pro_wang_luo_jie_shou
+        name: 下行
+        type: area
+        curve: smooth
+        stroke_width: 2
+        transform: return Number(x) / 1048576;
+        unit: MB/s
+        color: '#42a5f5'
+      - entity: sensor.ji_kong_jian_z4pro_wang_luo_fa_song
+        name: 上行
+        type: area
+        curve: smooth
+        stroke_width: 2
+        transform: return Number(x) / 1048576;
+        unit: MB/s
+        color: '#ab47bc'
+      yaxis:
+      - decimals: 1
+        apex_config:
+          tickAmount: 4
+      apex_config:
+        chart:
+          height: 230
+        legend:
+          show: false
+        grid:
+          strokeDashArray: 3
+- title: 全部实体
+  path: all
+  icon: mdi:format-list-bulleted
+  type: sections
+  max_columns: 2
+  sections:
+  - type: grid
+    cards:
+    - type: heading
+      heading: 传感器
+      icon: mdi:gauge
+    - type: custom:auto-entities
+      card:
+        type: entities
+        state_color: true
+      filter:
+        include:
+        - domain: sensor
+          integration: zspace_nas
+      sort:
+        method: name
+        ignore_case: true
+    - type: heading
+      heading: 二进制传感器
+      icon: mdi:toggle-switch
+    - type: custom:auto-entities
+      card:
+        type: entities
+        state_color: true
+      filter:
+        include:
+        - domain: binary_sensor
+          integration: zspace_nas
+      sort:
+        method: name
+        ignore_case: true
+  - type: grid
+    cards:
+    - type: heading
+      heading: 容器开关
+      icon: mdi:docker
+    - type: custom:auto-entities
+      card:
+        type: entities
+        state_color: true
+      filter:
+        include:
+        - domain: switch
+          integration: zspace_nas
+      sort:
+        method: name
+        ignore_case: true

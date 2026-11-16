@@ -44,9 +44,12 @@ class ZspaceSensor(ZspaceEntity, SensorEntity):
         device_class: SensorDeviceClass | None = None,
         icon: str | None = None,
         precision: int | None = None,
+        state_class: SensorStateClass | None = SensorStateClass.MEASUREMENT,
     ) -> None:
         super().__init__(runtime, coordinator, key)
         self._attr_name = name
+        # 文本型数值（如「8天 20小时」）不能带 state_class，否则 HA 判定为不可用
+        self._attr_state_class = state_class
         self._attr_native_unit_of_measurement = unit
         self._attr_device_class = device_class
         self._attr_icon = icon
@@ -125,6 +128,7 @@ async def async_setup_entry(
             "运行时长",
             lambda d: d.uptime,
             icon="mdi:clock-outline",
+            state_class=None,
         ),
         ZspaceSensor(
             runtime,
