@@ -23,6 +23,7 @@ from .zspace.normalize import (
     StorageData,
     SystemData,
     VmData,
+    VmInfo,
     normalize_containers,
     normalize_disks,
     normalize_downloads,
@@ -51,6 +52,7 @@ __all__ = [
     "TaskCoordinator",
     "VmCoordinator",
     "VmData",
+    "VmInfo",
     "ZspaceBaseCoordinator",
 ]
 
