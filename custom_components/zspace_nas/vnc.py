@@ -25,7 +25,7 @@ from typing import Any
 from aiohttp import WSMsgType, web
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.http import HomeAssistantView
+from homeassistant.helpers.http import KEY_HASS, HomeAssistantView
 
 from .const import DOMAIN
 from .vnc_token import TOKEN_TTL_HOURS, make_token, parse_token
@@ -120,6 +120,19 @@ def _resolve(hass: HomeAssistant, token: str) -> tuple[Any, Any] | tuple[None, N
 
 
 # ── HTTP 视图 ───────────────────────────────────────────
+def hass_of(request: web.Request) -> HomeAssistant:
+    """从请求取 HA 实例。
+
+    HA 2026.x 起 HomeAssistantView 不再注入 self.hass，改从 app 的 KEY_HASS 取。
+    这里同时兼容旧版（app 里是裸字符串键 "hass"）与新版（AppKey）。
+    """
+    app = request.app
+    try:
+        return app[KEY_HASS]
+    except KeyError:
+        return app["hass"]
+
+
 class ConsoleView(HomeAssistantView):
     """把带令牌的地址重定向到静态控制台页面。"""
 
@@ -128,7 +141,7 @@ class ConsoleView(HomeAssistantView):
     requires_auth = False
 
     async def get(self, request: web.Request, token: str) -> web.StreamResponse:
-        runtime, vm = _resolve(self.hass, token)
+        runtime, vm = _resolve(hass_of(request), token)
         if runtime is None:
             return web.Response(status=403, text="链接无效或已过期，请从设备页重新打开。")
         raise web.HTTPFound(f"{STATIC_URL}/console.html?t={token}")
@@ -142,7 +155,7 @@ class VncBridgeView(HomeAssistantView):
     requires_auth = False
 
     async def get(self, request: web.Request, token: str) -> web.StreamResponse:
-        runtime, vm = _resolve(self.hass, token)
+        runtime, vm = _resolve(hass_of(request), token)
         if runtime is None:
             return web.Response(status=403, text="链接无效或已过期")
 
