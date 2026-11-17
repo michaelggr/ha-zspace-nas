@@ -1,0 +1,37 @@
+{
+  "domainList": [
+    {
+      "name": "zspace_win10",
+      "title": "Windows 10",
+      "isStart": true,
+      "domainState": "running",
+      "cpuNum": 4,
+      "memoryGib": 8,
+      "vncPort": 5901,
+      "osType": "win",
+      "ip": "192.168.1.50",
+      "disks": [
+        {
+          "capacityGib": 64
+        },
+        {
+          "capacityGib": 128
+        }
+      ],
+      "vncEnable": true
+    },
+    {
+      "name": "zspace_ubuntu",
+      "title": "Ubuntu",
+      "state": 2,
+      "cpuNum": 2,
+      "memory": 4096,
+      "osType": "linux",
+      "disks": [
+        {
+          "capacity": 32
+        }
+      ]
+    }
+  ]
+}

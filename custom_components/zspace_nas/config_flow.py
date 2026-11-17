@@ -32,6 +32,7 @@ from .const import (
     CONF_PROTECTED,
     CONF_SHORT_IDS,
     CONF_STORAGE_INTERVAL,
+    CONF_VM_INTERVAL,
     CONF_SYSTEM_INTERVAL,
     CONF_WEB_URL,
     DEFAULT_BINARY,
@@ -42,6 +43,7 @@ from .const import (
     DEFAULT_PROFILE,
     DEFAULT_PROFILE_HOME,
     DEFAULT_STORAGE_INTERVAL,
+    DEFAULT_VM_INTERVAL,
     DEFAULT_SYSTEM_INTERVAL,
     DOMAIN,
     MAX_COOLDOWN,
@@ -280,6 +282,14 @@ class ZspaceNasOptionsFlow(OptionsFlow):
                 vol.Optional(
                     CONF_DOWNLOAD_INTERVAL,
                     default=options.get(CONF_DOWNLOAD_INTERVAL, DEFAULT_DOWNLOAD_INTERVAL),
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=MIN_INTERVAL, max=MAX_INTERVAL, step=30, unit_of_measurement="s"
+                    )
+                ),
+                vol.Optional(
+                    CONF_VM_INTERVAL,
+                    default=options.get(CONF_VM_INTERVAL, DEFAULT_VM_INTERVAL),
                 ): selector.NumberSelector(
                     selector.NumberSelectorConfig(
                         min=MIN_INTERVAL, max=MAX_INTERVAL, step=30, unit_of_measurement="s"

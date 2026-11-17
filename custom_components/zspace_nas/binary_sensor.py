@@ -12,12 +12,14 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
-from .coordinator import ContainerInfo, DiskInfo
+from .coordinator import ContainerInfo, DiskInfo, VmInfo
 from .entity import (
     ZspaceEntity,
     async_forget_entity,
     container_device_info,
     find_container,
+    find_vm,
+    vm_device_info,
 )
 from .naming import token_or_hash
 from .runtime import ZspaceRuntime
@@ -82,6 +84,56 @@ class ContainerRunningSensor(ZspaceEntity, BinarySensorEntity):
                 if container.memory_bytes
                 else None
             ),
+        }
+
+
+class VmRunningSensor(ZspaceEntity, BinarySensorEntity):
+    """虚拟机电源状态。`ops vm` 是只读接口，不会碰虚拟机本身。"""
+
+    _platform_domain = "binary_sensor"
+    _attr_device_class = BinarySensorDeviceClass.RUNNING
+
+    def __init__(self, runtime: ZspaceRuntime, vm: VmInfo) -> None:
+        self._vm_name = vm.name
+        self._vm_title = vm.title
+        super().__init__(runtime, runtime.vm, f"vm_{vm.name}_running")
+        self._attr_name = "运行中"
+        self._vm_device = vm_device_info(runtime, vm.name, vm.title, vm.os_type)
+
+    def _entity_id_parts(self) -> tuple[str, ...]:
+        return ("vm", token_or_hash(getattr(self, "_vm_name", "")), "running")
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return self._vm_device
+
+    @property
+    def available(self) -> bool:
+        return self.coordinator.last_update_success and self._vm is not None
+
+    @property
+    def _vm(self) -> VmInfo | None:
+        return find_vm(self.coordinator.data, self._vm_name)
+
+    @property
+    def is_on(self) -> bool | None:
+        vm = self._vm
+        return vm.running if vm else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, object]:
+        vm = self._vm
+        if vm is None:
+            return {}
+        return {
+            "vm_name": vm.name,
+            "state": vm.raw_state,
+            "os_type": vm.os_type,
+            "ip": vm.ip,
+            "vnc_port": vm.vnc_port,
+            "cpu_count": vm.cpu_count,
+            "memory_gib": vm.memory_gib,
+            "disk_gib": vm.disk_gib,
         }
 
 
@@ -152,6 +204,12 @@ async def async_setup_entry(
     disk_data = runtime.disk.data
     if disk_data:
         entities.extend(DiskHealthSensor(runtime, disk) for disk in disk_data.disks)
+
+    vm_data = runtime.vm.data
+    if vm_data:
+        entities.extend(
+            VmRunningSensor(runtime, vm) for vm in vm_data.vms
+        )
 
     data = runtime.docker.data
     if data:

@@ -162,6 +162,27 @@ def container_device_info(
     )
 
 
+def vm_device_info(
+    runtime: ZspaceRuntime, name: str, title: str, os_type: str | None = None
+) -> DeviceInfo:
+    """虚拟机挂在 NAS 下面：设备 → 虚拟机。"""
+    return DeviceInfo(
+        identifiers={(DOMAIN, f"{runtime.identifier}_vm_{name}")},
+        name=title or name,
+        manufacturer="极空间",
+        model=os_type or "虚拟机",
+        via_device=(DOMAIN, runtime.identifier),
+    )
+
+
+def find_vm(data: Any, name: str) -> Any:
+    """在 VmData 快照里按 name 找虚拟机。"""
+    for vm in getattr(data, "vms", []) or []:
+        if vm.name == name:
+            return vm
+    return None
+
+
 def entry_identifier(entry_id: str, serial: str | None) -> str:
     return f"nas_{serial}" if serial else f"nas_{entry_id}"
 

@@ -12,6 +12,7 @@ from .coordinator import (
     StorageCoordinator,
     SystemCoordinator,
     TaskCoordinator,
+    VmCoordinator,
 )
 from .safety import SafetyGuard
 from .zspace import ZspaceCliClient
@@ -27,6 +28,7 @@ class ZspaceRuntime:
     docker: DockerCoordinator
     disk: DiskCoordinator
     tasks: TaskCoordinator
+    vm: VmCoordinator
     guard: SafetyGuard
     allow_control: bool
     # 是否启用短英文 entity_id（选项 short_entity_ids）
@@ -34,4 +36,4 @@ class ZspaceRuntime:
 
     @property
     def coordinators(self) -> tuple:
-        return (self.system, self.storage, self.docker, self.disk, self.tasks)
+        return (self.system, self.storage, self.docker, self.disk, self.tasks, self.vm)

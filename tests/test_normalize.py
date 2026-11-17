@@ -22,6 +22,7 @@ from zspace.normalize import (  # noqa: E402
     normalize_engine,
     normalize_smart,
     normalize_storage,
+    normalize_vms,
     normalize_system,
 )
 
@@ -146,6 +147,46 @@ class PoolDiskTest(unittest.TestCase):
     def test_missing_reallocated(self) -> None:
         # NVMe / 部分固件不带重映射计数，应为 None 而不是 0
         self.assertIsNone(self.data.pools[1].disks[0].reallocated)
+
+
+class VmTest(unittest.TestCase):
+    """虚拟机列表：真机字段名不统一，靠别名容错。"""
+
+    def setUp(self) -> None:
+        self.data = normalize_vms(_load("ops-vm.json"))
+
+    def test_count_and_titles(self) -> None:
+        self.assertEqual(len(self.data.vms), 2)
+        self.assertEqual(self.data.vms[0].title, "Windows 10")
+        self.assertEqual(self.data.vms[1].name, "zspace_ubuntu")
+
+    def test_power_state(self) -> None:
+        self.assertTrue(self.data.vms[0].running)   # isStart: true
+        self.assertFalse(self.data.vms[1].running)  # state: 2 = 关闭
+        self.assertEqual(self.data.running_count, 1)
+
+    def test_memory_unit_fallback(self) -> None:
+        self.assertEqual(self.data.vms[0].memory_gib, 8)
+        # 4096 明显是 MiB，折算成 4 GiB
+        self.assertEqual(self.data.vms[1].memory_gib, 4.0)
+
+    def test_disk_sum(self) -> None:
+        self.assertEqual(self.data.vms[0].disk_gib, 192)
+        self.assertEqual(self.data.vms[1].disk_gib, 32)
+
+    def test_vnc_and_ip(self) -> None:
+        self.assertEqual(self.data.vms[0].vnc_port, 5901)
+        self.assertEqual(self.data.vms[0].ip, "192.168.1.50")
+        self.assertIsNone(self.data.vms[1].vnc_port)
+
+    def test_empty_payload(self) -> None:
+        for payload in ({}, [], {"domainList": []}, None):
+            self.assertEqual(len(normalize_vms(payload).vms), 0)
+
+    def test_single_detail_object(self) -> None:
+        data = normalize_vms({"domainDetail": {"name": "zspace_a", "isStart": False}})
+        self.assertEqual(len(data.vms), 1)
+        self.assertFalse(data.vms[0].running)
 
 
 class DiskTest(unittest.TestCase):

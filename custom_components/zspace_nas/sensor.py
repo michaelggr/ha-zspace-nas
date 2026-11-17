@@ -118,6 +118,13 @@ def _pool_attr(data: StorageData, key: str, attr: str) -> Any:
     return None
 
 
+def _vm_attr(data: Any, name: str, attr: str) -> Any:
+    for vm in getattr(data, "vms", []):
+        if vm.name == name:
+            return getattr(vm, attr, None)
+    return None
+
+
 def _disk_attr(data: Any, sn: str, attr: str) -> Any:
     for disk in getattr(data, "disks", []):
         if disk.sn == sn:
@@ -322,6 +329,64 @@ async def async_setup_entry(
                         unit="GiB",
                         device_class=SensorDeviceClass.DATA_SIZE,
                         icon="mdi:harddisk",
+                        precision=0,
+                    ),
+                ]
+            )
+
+    vm_data = runtime.vm.data
+    if vm_data:
+        for vm in vm_data.vms:
+            vm_name = vm.name
+            entities.extend(
+                [
+                    ZspaceSensor(
+                        runtime,
+                        runtime.vm,
+                        f"vm_{vm_name}_vcpu",
+                        "虚拟 CPU",
+                        lambda d, n=vm_name: _vm_attr(d, n, "cpu_count"),
+                        icon="mdi:cpu-64-bit",
+                        precision=0,
+                    ),
+                    ZspaceSensor(
+                        runtime,
+                        runtime.vm,
+                        f"vm_{vm_name}_memory",
+                        "内存",
+                        lambda d, n=vm_name: _vm_attr(d, n, "memory_gib"),
+                        unit="GiB",
+                        device_class=SensorDeviceClass.DATA_SIZE,
+                        icon="mdi:memory",
+                        precision=2,
+                    ),
+                    ZspaceSensor(
+                        runtime,
+                        runtime.vm,
+                        f"vm_{vm_name}_disk",
+                        "磁盘容量",
+                        lambda d, n=vm_name: _vm_attr(d, n, "disk_gib"),
+                        unit="GiB",
+                        device_class=SensorDeviceClass.DATA_SIZE,
+                        icon="mdi:harddisk",
+                        precision=2,
+                    ),
+                    ZspaceSensor(
+                        runtime,
+                        runtime.vm,
+                        f"vm_{vm_name}_ip",
+                        "IP 地址",
+                        lambda d, n=vm_name: _vm_attr(d, n, "ip"),
+                        icon="mdi:ip-network",
+                        state_class=None,
+                    ),
+                    ZspaceSensor(
+                        runtime,
+                        runtime.vm,
+                        f"vm_{vm_name}_vnc",
+                        "VNC 端口",
+                        lambda d, n=vm_name: _vm_attr(d, n, "vnc_port"),
+                        icon="mdi:monitor-dashboard",
                         precision=0,
                     ),
                 ]

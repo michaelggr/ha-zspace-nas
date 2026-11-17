@@ -496,3 +496,120 @@ def normalize_logs(raw: object) -> list[str]:
             else:
                 lines.append(json.dumps(item, ensure_ascii=False))
     return lines
+
+
+# ── 虚拟机（ops vm，只读）────────────────────────────────
+@dataclass
+class VmInfo:
+    """一台虚拟机。字段名在不同固件上差异大，全部走别名容错。"""
+
+    name: str
+    title: str
+    running: bool = False
+    raw_state: str | None = None
+    cpu_count: int | None = None
+    memory_gib: float | None = None
+    disk_gib: float | None = None
+    ip: str | None = None
+    vnc_port: int | None = None
+    os_type: str | None = None
+
+
+@dataclass
+class VmData:
+    vms: list[VmInfo] = field(default_factory=list)
+
+    @property
+    def running_count(self) -> int:
+        return sum(1 for vm in self.vms if vm.running)
+
+
+_RUNNING_STATES = ("running", "started", "start", "on", "1", "normal")
+_STOPPED_STATES = ("stopped", "shutdown", "halt", "off", "0", "3", "suspend", "paused")
+
+
+def _vm_running(item: dict) -> tuple[bool, str | None]:
+    """电源状态：真机可能是 isStart(bool)、state(数字/字符串) 或 domainState。"""
+    raw = pick(item, ["isStart", "running", "state", "domainState", "status"])
+    if isinstance(raw, bool):
+        return raw, str(int(raw))
+    text = str(raw).strip().lower() if raw is not None else ""
+    if text in _RUNNING_STATES:
+        return True, text
+    if text in _STOPPED_STATES:
+        return False, text
+    # 极空间后端常见 1=运行、2=关闭，认不出来就当停止
+    if text.isdigit():
+        return text in ("1",), text
+    return False, text or None
+
+
+def _vm_memory_gib(item: dict) -> float | None:
+    """内存单位不固定：memoryGib 是 GiB，memory/memoryNum 可能是 MiB。"""
+    value = pick(item, ["memoryGib", "memory_gib", "memory", "memoryNum", "mem"])
+    number = as_float(value)
+    if number is None:
+        return None
+    if number > 512:  # 明显是 MiB
+        return round(number / 1024, 2)
+    return round(number, 2)
+
+
+def _vm_disk_gib(item: dict) -> float | None:
+    disks = pick(item, ["disks", "diskList", "disk_list", "volumes"])
+    if not isinstance(disks, list):
+        return None
+    total = 0.0
+    found = False
+    for disk in disks:
+        if not isinstance(disk, dict):
+            continue
+        size = as_float(pick(disk, ["capacityGib", "capacity_gib", "capacity", "size"]))
+        if size is None:
+            continue
+        # capacity 可能以字节或 MiB 给出
+        if size > 1024 * 1024:
+            size = size / 1024**3
+        elif size > 4096:
+            size = size / 1024
+        total += size
+        found = True
+    return round(total, 2) if found else None
+
+
+def normalize_vms(raw: object) -> VmData:
+    """`ops vm` 返回列表；单台详情是对象，也兼容。"""
+    items: object = raw
+    if isinstance(raw, dict):
+        for key in ("domainList", "list", "items", "data", "domainDetail"):
+            if key in raw:
+                items = raw[key]
+                break
+        else:
+            items = []
+    if isinstance(items, dict):
+        items = [items]
+
+    vms: list[VmInfo] = []
+    for item in items if isinstance(items, list) else []:
+        if not isinstance(item, dict):
+            continue
+        name = str(pick(item, ["name", "vmName", "domainName", "id"]) or "")
+        if not name:
+            continue
+        running, raw_state = _vm_running(item)
+        vms.append(
+            VmInfo(
+                name=name,
+                title=str(pick(item, ["title", "displayName", "remark", "nickname"]) or name),
+                running=running,
+                raw_state=raw_state,
+                cpu_count=as_int(pick(item, ["cpuNum", "cpu_count", "vcpu", "cpu"])),
+                memory_gib=_vm_memory_gib(item),
+                disk_gib=_vm_disk_gib(item),
+                ip=str(pick(item, ["ip", "ipAddress", "ipv4", "guestIp"]) or "") or None,
+                vnc_port=as_int(pick(item, ["vncPort", "vnc_port"])),
+                os_type=str(pick(item, ["osType", "os_type", "guestType"]) or "") or None,
+            )
+        )
+    return VmData(vms=vms)

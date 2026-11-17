@@ -55,7 +55,8 @@
           "system_interval": "系统轮询间隔",
           "storage_interval": "存储轮询间隔",
           "download_interval": "下载任务轮询间隔",
-          "disk_interval": "磁盘 SMART 轮询间隔"
+          "disk_interval": "磁盘 SMART 轮询间隔",
+          "vm_interval": "虚拟机轮询间隔"
         },
         "data_description": {
           "allow_control": "开启后才会生成容器开关与重启按钮；删除、强制停止、引擎开关永远不会开放。",
@@ -66,7 +67,8 @@
           "download_interval": "下载任务变化较慢，默认 5 分钟。",
           "disk_interval": "SMART 需要逐盘查询（单盘约 0.4 秒），默认 1 小时。",
           "web_url": "填了就变成设备的「访问」链接，例如 http://192.168.1.10:5055。留空则不显示。",
-          "short_entity_ids": "开启后实体 ID 从拼音改为 zspace_cpu_usage 这种英文形式（显示名不变）。写入面板或自动化里的旧 ID 会失效，需要同步更新；迁移不可逆。"
+          "short_entity_ids": "开启后实体 ID 从拼音改为 zspace_cpu_usage 这种英文形式（显示名不变）。写入面板或自动化里的旧 ID 会失效，需要同步更新；迁移不可逆。",
+          "vm_interval": "只读接口，一次拿整张表，默认 2 分钟。"
         }
       }
     }

@@ -26,6 +26,7 @@ from .const import (
     CONF_PROFILE,
     CONF_PROFILE_HOME,
     CONF_STORAGE_INTERVAL,
+    CONF_VM_INTERVAL,
     CONF_SYSTEM_INTERVAL,
     CONF_WEB_URL,
     DEFAULT_BINARY,
@@ -37,6 +38,7 @@ from .const import (
     DEFAULT_PROFILE_HOME,
     DEFAULT_WEB_URL,
     DEFAULT_STORAGE_INTERVAL,
+    DEFAULT_VM_INTERVAL,
     DEFAULT_SYSTEM_INTERVAL,
     DOMAIN,
     PLATFORMS,
@@ -47,6 +49,7 @@ from .coordinator import (
     StorageCoordinator,
     SystemCoordinator,
     TaskCoordinator,
+    VmCoordinator,
 )
 from .entity import (
     purge_orphan_containers,
@@ -118,6 +121,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "tasks",
         options.get(CONF_DOWNLOAD_INTERVAL, DEFAULT_DOWNLOAD_INTERVAL),
     )
+    vm = VmCoordinator(
+        hass, entry, client, "vm", options.get(CONF_VM_INTERVAL, DEFAULT_VM_INTERVAL)
+    )
 
     # 系统信息是实体存在的前提，失败直接让 entry 进入重试
     await system.async_config_entry_first_refresh()
@@ -127,6 +133,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         docker.async_refresh(),
         disk.async_refresh(),
         tasks.async_refresh(),
+        vm.async_refresh(),
         return_exceptions=True,
     )
     for result in results:
@@ -152,6 +159,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         docker=docker,
         disk=disk,
         tasks=tasks,
+        vm=vm,
         guard=guard,
         allow_control=allow_control,
         short_ids=bool(options.get(CONF_SHORT_IDS, False)),

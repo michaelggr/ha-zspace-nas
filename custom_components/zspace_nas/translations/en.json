@@ -55,7 +55,8 @@
           "system_interval": "System polling interval",
           "storage_interval": "Storage polling interval",
           "download_interval": "Download polling interval",
-          "disk_interval": "Disk SMART polling interval"
+          "disk_interval": "Disk SMART polling interval",
+          "vm_interval": "VM polling interval"
         },
         "data_description": {
           "allow_control": "Creates container switches and restart buttons. Delete, force-stop and engine power are never exposed.",
@@ -66,7 +67,8 @@
           "download_interval": "Download tasks change slowly, 5 minutes by default.",
           "disk_interval": "SMART is queried per disk (~0.4s each), 1 hour by default.",
           "web_url": "Shown as the device Visit link, e.g. http://192.168.1.10:5055. Empty hides it.",
-          "short_entity_ids": "Renames entity IDs from pinyin to short English like zspace_cpu_usage (display names unchanged). Old IDs used in dashboards/automations will break; not reversible."
+          "short_entity_ids": "Renames entity IDs from pinyin to short English like zspace_cpu_usage (display names unchanged). Old IDs used in dashboards/automations will break; not reversible.",
+          "vm_interval": "Read-only call, 2 minutes by default."
         }
       }
     }

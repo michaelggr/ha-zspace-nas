@@ -71,8 +71,8 @@ DUMP_ALLOWLIST: frozenset[tuple[str, str]] = frozenset(
         ("backup", "status"),
         ("app", "list"),
         ("app", "status"),
-        ("vm", "vm"),
-        ("iscsi", "iscsi"),
+        ("ops", "vm"),
+        ("ops", "iscsi"),
         ("ops", "security"),
     }
 )

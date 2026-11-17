@@ -22,6 +22,7 @@ from .zspace.normalize import (
     DownloadData,
     StorageData,
     SystemData,
+    VmData,
     normalize_containers,
     normalize_disks,
     normalize_downloads,
@@ -29,6 +30,7 @@ from .zspace.normalize import (
     normalize_smart,
     normalize_storage,
     normalize_system,
+    normalize_vms,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -46,6 +48,8 @@ __all__ = [
     "SystemCoordinator",
     "SystemData",
     "TaskCoordinator",
+    "VmCoordinator",
+    "VmData",
     "ZspaceBaseCoordinator",
 ]
 
@@ -157,3 +161,15 @@ class TaskCoordinator(ZspaceBaseCoordinator):
     async def _fetch(self) -> DownloadData:
         raw = await self.client.async_call("download", "tasks", {"start": 0, "num": 50})
         return normalize_downloads(raw)
+
+
+class VmCoordinator(ZspaceBaseCoordinator):
+    """虚拟机列表，默认 2 分钟一次。
+
+    `ops vm` 是只读能力，一次调用拿到整张表；单台详情（快照、定时、显卡）
+    等后面需要再单独拉，避免每台 VM 多打一次接口。
+    """
+
+    async def _fetch(self) -> VmData:
+        raw = await self.client.async_call("ops", "vm", {})
+        return normalize_vms(raw)

@@ -25,6 +25,7 @@ CONF_SYSTEM_INTERVAL = "system_interval"
 CONF_STORAGE_INTERVAL = "storage_interval"
 CONF_DISK_INTERVAL = "disk_interval"
 CONF_DOWNLOAD_INTERVAL = "download_interval"
+CONF_VM_INTERVAL = "vm_interval"
 
 # 二进制随集成下发，留空即用内置（按 CPU 架构自动选 x64/arm64）；
 # 登录态目录放 /config 下，跨升级保留。
@@ -40,6 +41,7 @@ DEFAULT_SYSTEM_INTERVAL = 60
 DEFAULT_STORAGE_INTERVAL = 300
 DEFAULT_DISK_INTERVAL = 3600   # SMART 逐盘查询，慢，按小时
 DEFAULT_DOWNLOAD_INTERVAL = 300
+DEFAULT_VM_INTERVAL = 120   # 虚拟机列表很轻，两分钟够用
 
 MIN_INTERVAL = 10
 MAX_INTERVAL = 3600
