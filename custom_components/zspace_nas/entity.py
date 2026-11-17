@@ -6,6 +6,7 @@ import logging
 import re
 from typing import Any
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
@@ -103,6 +104,48 @@ async def async_forget_entity(hass: HomeAssistant, entity: Any) -> None:
     if devices.async_get(device_id) is not None:
         devices.async_remove_device(device_id)
         _LOGGER.debug("极空间清理空设备：%s", device_id)
+
+
+def purge_orphan_containers(
+    hass: HomeAssistant, entry: ConfigEntry, runtime: ZspaceRuntime
+) -> int:
+    """启动时清掉「容器已删除、实体还留在注册表」的孤儿。
+
+    运行期由各平台的跟随逻辑处理；但 HA 停机期间删掉的容器没有对象可跟随，
+    只能在启动时扫一遍注册表。数据没拿到时直接返回，避免误删。
+    """
+    data = runtime.docker.data
+    if data is None or not runtime.docker.last_update_success:
+        return 0
+
+    live = {(container.id or container.name)[:12] for container in data.containers}
+    registry = er.async_get(hass)
+    devices = dr.async_get(hass)
+    prefix = f"{runtime.identifier}_"
+    removed = 0
+
+    for item in list(er.async_entries_for_config_entry(registry, entry.entry_id)):
+        if not item.device_id:
+            continue
+        device = devices.async_get(item.device_id)
+        if device is None:
+            continue
+        identifier = next(
+            (ident[1] for ident in device.identifiers if ident[0] == DOMAIN), None
+        )
+        # NAS 设备本身没有后缀，容器设备是 <nas>_<id12>
+        if not identifier or not identifier.startswith(prefix):
+            continue
+        if identifier[len(prefix):] in live:
+            continue
+        registry.async_remove(item.entity_id)
+        removed += 1
+        if not er.async_entries_for_device(registry, item.device_id):
+            devices.async_remove_device(item.device_id)
+
+    if removed:
+        _LOGGER.info("极空间清理了 %s 个已删除容器的残留实体", removed)
+    return removed
 
 
 def container_device_info(

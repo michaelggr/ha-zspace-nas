@@ -48,7 +48,11 @@ from .coordinator import (
     SystemCoordinator,
     TaskCoordinator,
 )
-from .entity import build_device_info, entry_identifier
+from .entity import (
+    purge_orphan_containers,
+    build_device_info,
+    entry_identifier,
+)
 from .runtime import ZspaceRuntime
 from .safety import SafetyGuard, build_policy
 from .services import async_setup_services
@@ -153,6 +157,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         short_ids=bool(options.get(CONF_SHORT_IDS, False)),
     )
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = runtime
+
+    # 停机期间被删掉的容器，注册表里还留着孤儿实体，这里补一次清理
+    purge_orphan_containers(hass, entry, runtime)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await async_setup_services(hass)
