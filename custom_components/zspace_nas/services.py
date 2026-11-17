@@ -268,7 +268,6 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     hass.services.async_register(
         DOMAIN,
         SERVICE_CONTAINER_LOGS,
-    SERVICE_VNC_URL,
         _handle_container_logs,
         schema=LOGS_SCHEMA,
         supports_response=SupportsResponse.OPTIONAL,

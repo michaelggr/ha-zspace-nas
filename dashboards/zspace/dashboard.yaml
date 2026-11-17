@@ -365,6 +365,60 @@ views:
           show: false
         grid:
           strokeDashArray: 3
+- title: 虚拟机
+  path: vms
+  icon: mdi:desktop-tower-monitor
+  type: sections
+  max_columns: 2
+  sections:
+  - type: grid
+    cards:
+    - type: heading
+      heading: 虚拟机
+      icon: mdi:desktop-tower-monitor
+    - type: custom:auto-entities
+      card:
+        type: entities
+        state_color: true
+        title: 运行状态
+      filter:
+        include:
+        - domain: binary_sensor
+          integration: zspace_nas
+          name: '*虚拟机*运行*'
+      sort:
+        method: name
+        ignore_case: true
+      grid_options:
+        columns: 12
+    - type: markdown
+      content: >-
+        **打开控制台**：到「设置 → 设备与服务 → 极空间 Z4Pro → 对应虚拟机」，
+        点右上角**「访问」**即可打开 noVNC 控制台（链接每 6 小时自动续签，不会失效）。
+
+        虚拟机须在极空间里已开启 VNC，且集成选项勾选了「虚拟机控制台」。
+      grid_options:
+        columns: 12
+  - type: grid
+    cards:
+    - type: heading
+      heading: 资源占用
+      icon: mdi:gauge
+    - type: custom:auto-entities
+      card:
+        type: entities
+        state_color: true
+        title: CPU / 内存 / 磁盘
+      filter:
+        include:
+        - domain: sensor
+          integration: zspace_nas
+          name: '*使用率*'
+      sort:
+        method: name
+        ignore_case: true
+      grid_options:
+        columns: 12
 - title: 全部实体
   path: all
   icon: mdi:format-list-bulleted
