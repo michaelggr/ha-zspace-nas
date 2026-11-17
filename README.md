@@ -56,22 +56,26 @@ NAS 关机/重启、磁盘格式化、存储池删除、RAID 重建、防火墙�
 
 ## 虚拟机（只读）
 
-走 `ops vm` 这个只读能力（`risk=read`），一次调用拿整张表，**不碰 vm-manage**，
-所以不会开机、关机、改配置。每台虚拟机一个设备，实体：
+走 `ops vm` 这个只读能力（`risk=read`），**不碰 vm-manage**，所以不会开机、关机、改配置。
+
+真机（ZOS 4.x）字段：`name` / `title` / `osType` / `cpuNum` / `memGbNum` /
+`cpuPercent` / `memPercent` / `state`（1=运行、5=关闭）/ `stateLang` / `vncPort`。
+列表接口没有磁盘容量和 VNC 地址，协调器会逐台补一次详情（`vm_id=<name>`）。
+
+每台虚拟机一个设备，实体：
 
 | 实体 | 说明 |
 | --- | --- |
-| 运行中（二进制） | 电源状态，属性里带 os_type / ip / vnc_port / cpu / 内存 / 磁盘 |
-| 虚拟 CPU | vCPU 数量 |
-| 内存 / 磁盘容量 | GiB |
-| IP 地址 | 客体 IP（拿不到就是空） |
-| VNC 端口 | 极空间给这台 VM 分配的 VNC 端口 |
+| 运行中（二进制） | 电源状态；属性带 os_type / firmware / uuid / vnc_port / **vnc_endpoints** / cpu / 内存 / 磁盘 |
+| CPU 使用率、内存使用率 | 来自 `cpuPercent` / `memPercent`，百分数 |
+| 虚拟 CPU、内存、磁盘容量 | 核数 / GiB / GiB（磁盘取 `sdaList[].virtualsize`） |
+| VNC 端口 | 极空间分配的端口；`vnc_endpoints` 属性里是 `IP:端口` 地址列，**纯 TCP VNC** |
 
-轮询默认 2 分钟（选项可调）。虚拟机增删后重载一次集成即可——VM 数量少，
-暂时没做容器那种逐轮补齐。
+轮询默认 2 分钟（选项可调）。
 
-**还没做的**：开机 / 关机 / 重启。这些要走 `vm-manage`（destructive 域），
-我准备等真机字段核对完再加，并且会放进独立白名单 + 冷却，默认关闭。
+**还没做**：开机 / 关机 / 重启。这些要走 `vm-manage`（destructive 域）。另外注意：
+如果某个虚拟机就是你的 Home Assistant 本体，关机等于把自己关掉——所以这块要单独
+设计白名单和二次确认，不能跟容器一样一键开关。
 
 ## 容器实体自动跟随
 

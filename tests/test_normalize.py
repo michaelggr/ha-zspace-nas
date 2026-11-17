@@ -150,43 +150,45 @@ class PoolDiskTest(unittest.TestCase):
 
 
 class VmTest(unittest.TestCase):
-    """虚拟机列表：真机字段名不统一，靠别名容错。"""
+    """虚拟机解析：字段按真机 ZOS 4.x（state 1=运行、5=关闭，memGbNum 是 GiB）。"""
 
     def setUp(self) -> None:
         self.data = normalize_vms(_load("ops-vm.json"))
+        self.detail = normalize_vms({"domainDetail": _load("ops-vm-detail.json")["data"]})
 
-    def test_count_and_titles(self) -> None:
-        self.assertEqual(len(self.data.vms), 2)
-        self.assertEqual(self.data.vms[0].title, "Windows 10")
-        self.assertEqual(self.data.vms[1].name, "zspace_ubuntu")
+    def test_list(self) -> None:
+        self.assertEqual(len(self.data.vms), 3)
+        self.assertEqual(self.data.running_count, 2)
+        self.assertEqual([vm.running for vm in self.data.vms], [True, True, False])
 
-    def test_power_state(self) -> None:
-        self.assertTrue(self.data.vms[0].running)   # isStart: true
-        self.assertFalse(self.data.vms[1].running)  # state: 2 = 关闭
-        self.assertEqual(self.data.running_count, 1)
+    def test_state_lang(self) -> None:
+        self.assertEqual(self.data.vms[0].raw_state, "运行中")
+        self.assertEqual(self.data.vms[2].raw_state, "已关闭")
 
-    def test_memory_unit_fallback(self) -> None:
-        self.assertEqual(self.data.vms[0].memory_gib, 8)
-        # 4096 明显是 MiB，折算成 4 GiB
-        self.assertEqual(self.data.vms[1].memory_gib, 4.0)
+    def test_specs(self) -> None:
+        vm = self.data.vms[0]
+        self.assertEqual(vm.cpu_count, 4)
+        self.assertEqual(vm.memory_gib, 6)
+        self.assertEqual(vm.os_type, "linux")
+        self.assertEqual(vm.vnc_port, 15566)
 
-    def test_disk_sum(self) -> None:
-        self.assertEqual(self.data.vms[0].disk_gib, 192)
-        self.assertEqual(self.data.vms[1].disk_gib, 32)
+    def test_detail_gives_disk_and_endpoints(self) -> None:
+        vm = self.detail.vms[0]
+        # virtualsize 53.7GB -> 50 GiB
+        self.assertEqual(vm.disk_gib, 50.0)
+        self.assertEqual(vm.vnc_port, 15566)
+        self.assertEqual(len(vm.vnc_endpoints), 3)
+        self.assertTrue(vm.vnc_endpoints[0].endswith(":15566"))
+        self.assertEqual(vm.firmware, "efi")
+        self.assertTrue(vm.uuid)
 
-    def test_vnc_and_ip(self) -> None:
-        self.assertEqual(self.data.vms[0].vnc_port, 5901)
-        self.assertEqual(self.data.vms[0].ip, "192.168.1.50")
-        self.assertIsNone(self.data.vms[1].vnc_port)
+    def test_usage_percent(self) -> None:
+        self.assertIsNotNone(self.data.vms[0].cpu_percent)
+        self.assertIsNotNone(self.data.vms[0].memory_percent)
 
     def test_empty_payload(self) -> None:
         for payload in ({}, [], {"domainList": []}, None):
             self.assertEqual(len(normalize_vms(payload).vms), 0)
-
-    def test_single_detail_object(self) -> None:
-        data = normalize_vms({"domainDetail": {"name": "zspace_a", "isStart": False}})
-        self.assertEqual(len(data.vms), 1)
-        self.assertFalse(data.vms[0].running)
 
 
 class DiskTest(unittest.TestCase):

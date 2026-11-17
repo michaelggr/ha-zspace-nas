@@ -501,7 +501,12 @@ def normalize_logs(raw: object) -> list[str]:
 # ── 虚拟机（ops vm，只读）────────────────────────────────
 @dataclass
 class VmInfo:
-    """一台虚拟机。字段名在不同固件上差异大，全部走别名容错。"""
+    """一台虚拟机。
+
+    真机字段（`ops vm`，ZOS 4.x）：name / title / osType / cpuNum / memGbNum /
+    cpuPercent / memPercent / state 或 domainState（1=运行，5=关闭）/ stateLang /
+    vncPort / firmware / uuid。详情接口额外给 sdaList[].virtualsize 与 vnc 地址列。
+    """
 
     name: str
     title: str
@@ -509,10 +514,15 @@ class VmInfo:
     raw_state: str | None = None
     cpu_count: int | None = None
     memory_gib: float | None = None
+    cpu_percent: float | None = None
+    memory_percent: float | None = None
     disk_gib: float | None = None
     ip: str | None = None
     vnc_port: int | None = None
+    vnc_endpoints: list[str] = field(default_factory=list)
     os_type: str | None = None
+    firmware: str | None = None
+    uuid: str | None = None
 
 
 @dataclass
@@ -546,7 +556,9 @@ def _vm_running(item: dict) -> tuple[bool, str | None]:
 
 def _vm_memory_gib(item: dict) -> float | None:
     """内存单位不固定：memoryGib 是 GiB，memory/memoryNum 可能是 MiB。"""
-    value = pick(item, ["memoryGib", "memory_gib", "memory", "memoryNum", "mem"])
+    value = pick(
+        item, ["memoryGib", "memory_gib", "memGbNum", "memory", "memoryNum", "mem"]
+    )
     number = as_float(value)
     if number is None:
         return None
@@ -556,7 +568,8 @@ def _vm_memory_gib(item: dict) -> float | None:
 
 
 def _vm_disk_gib(item: dict) -> float | None:
-    disks = pick(item, ["disks", "diskList", "disk_list", "volumes"])
+    """磁盘容量：真机详情里 sdaList[].virtualsize 是字节，capacity 是 GB 字符串。"""
+    disks = pick(item, ["disks", "diskList", "disk_list", "sdaList", "volumes"])
     if not isinstance(disks, list):
         return None
     total = 0.0
@@ -564,21 +577,35 @@ def _vm_disk_gib(item: dict) -> float | None:
     for disk in disks:
         if not isinstance(disk, dict):
             continue
+        virtual = as_float(disk.get("virtualsize"))
+        if virtual:
+            total += virtual / 1024**3
+            found = True
+            continue
         size = as_float(pick(disk, ["capacityGib", "capacity_gib", "capacity", "size"]))
         if size is None:
             continue
-        # capacity 可能以字节或 MiB 给出
-        if size > 1024 * 1024:
+        if size > 1024 * 1024:      # 字节
             size = size / 1024**3
-        elif size > 4096:
+        elif size > 4096:            # MiB
             size = size / 1024
         total += size
         found = True
     return round(total, 2) if found else None
 
 
-def normalize_vms(raw: object) -> VmData:
-    """`ops vm` 返回列表；单台详情是对象，也兼容。"""
+def _vm_endpoints(item: dict) -> list[str]:
+    """详情里的 vnc 是 ["192.168.0.170:15566", ...]，纯 TCP 地址。"""
+    raw = item.get("vnc")
+    if isinstance(raw, str):
+        return [raw]
+    if isinstance(raw, list):
+        return [str(addr) for addr in raw if addr]
+    return []
+
+
+def vm_items(raw: object) -> list[dict]:
+    """从 `ops vm` 的返回里取出虚拟机条目列表。"""
     items: object = raw
     if isinstance(raw, dict):
         for key in ("domainList", "list", "items", "data", "domainDetail"):
@@ -589,6 +616,12 @@ def normalize_vms(raw: object) -> VmData:
             items = []
     if isinstance(items, dict):
         items = [items]
+    return [item for item in items if isinstance(item, dict)] if isinstance(items, list) else []
+
+
+def normalize_vms(raw: object) -> VmData:
+    """`ops vm` 返回列表；单台详情是对象，也兼容。"""
+    items = vm_items(raw)
 
     vms: list[VmInfo] = []
     for item in items if isinstance(items, list) else []:
@@ -598,18 +631,24 @@ def normalize_vms(raw: object) -> VmData:
         if not name:
             continue
         running, raw_state = _vm_running(item)
+        state_lang = str(item.get("stateLang") or "") or None
         vms.append(
             VmInfo(
                 name=name,
                 title=str(pick(item, ["title", "displayName", "remark", "nickname"]) or name),
                 running=running,
-                raw_state=raw_state,
+                raw_state=state_lang or raw_state,
                 cpu_count=as_int(pick(item, ["cpuNum", "cpu_count", "vcpu", "cpu"])),
                 memory_gib=_vm_memory_gib(item),
+                cpu_percent=as_float(pick(item, ["cpuPercent", "cpu_percent"])),
+                memory_percent=as_float(pick(item, ["memPercent", "memoryPercent"])),
                 disk_gib=_vm_disk_gib(item),
                 ip=str(pick(item, ["ip", "ipAddress", "ipv4", "guestIp"]) or "") or None,
                 vnc_port=as_int(pick(item, ["vncPort", "vnc_port"])),
+                vnc_endpoints=_vm_endpoints(item),
                 os_type=str(pick(item, ["osType", "os_type", "guestType"]) or "") or None,
+                firmware=str(item.get("firmware") or "") or None,
+                uuid=str(item.get("uuid") or "") or None,
             )
         )
     return VmData(vms=vms)

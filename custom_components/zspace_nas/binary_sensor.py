@@ -129,10 +129,16 @@ class VmRunningSensor(ZspaceEntity, BinarySensorEntity):
             "vm_name": vm.name,
             "state": vm.raw_state,
             "os_type": vm.os_type,
+            "firmware": vm.firmware,
+            "uuid": vm.uuid,
             "ip": vm.ip,
             "vnc_port": vm.vnc_port,
+            # 真机给的直连地址列，例如 ["192.168.1.10:15566", ...]，纯 TCP VNC
+            "vnc_endpoints": vm.vnc_endpoints,
             "cpu_count": vm.cpu_count,
+            "cpu_percent": vm.cpu_percent,
             "memory_gib": vm.memory_gib,
+            "memory_percent": vm.memory_percent,
             "disk_gib": vm.disk_gib,
         }
 

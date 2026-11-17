@@ -1,0 +1,90 @@
+{
+  "data": {
+    "cpuNum": 4,
+    "cpuPercent": 0,
+    "createdAt": 1772113504,
+    "domainAbnormalState": 0,
+    "domainState": 1,
+    "domainTaskState": 0,
+    "firmware": "efi",
+    "imgType": "",
+    "interfaceList": [
+      {
+        "bus": "kvmbr0",
+        "driver": "e1000",
+        "macAddr": "52:54:00:b0:ae:03",
+        "name": "vnet0",
+        "receiveBytes": "0Byte/s",
+        "rxBytesPerSec": 0,
+        "rxPacketsPerSec": 0,
+        "sendBytes": "0Byte/s",
+        "state": 0,
+        "txBytesPerSec": 0,
+        "txPacketsPerSec": 0,
+        "type": "bridge"
+      }
+    ],
+    "iso": "",
+    "isoVirtio": "",
+    "locateM2": "/data_n004",
+    "machine": "i440fx",
+    "memFlag": 0,
+    "memGbNum": 6,
+    "memPercent": 0,
+    "modSriovGraphics": "no",
+    "name": "zspace_dgoxt5d60y5n8y3t",
+    "osType": "linux",
+    "sdaList": [
+      {
+        "bus": "sata",
+        "capacity": "50",
+        "device": "disk",
+        "disksize": 60558540800,
+        "index": 1,
+        "name": "sdb",
+        "rdBytesPerSec": 0,
+        "rdReqPerSec": 0,
+        "readBytes": "0Byte/s",
+        "source": "/data_n004/data/udata/real/virt/vms/vdisk_dgoxt5d60y5n8y3t_qlou4hn0.qcow2",
+        "state": 0,
+        "stateLang": "domain_disk_normal",
+        "type": "file",
+        "virtualsize": 53687091200,
+        "wrBytesPerSec": 0,
+        "wrReqPerSec": 0,
+        "writeBytes": "0Byte/s"
+      }
+    ],
+    "sdaPath": "/data_n004/data/udata/real/virt/vms",
+    "sriovGraphics": "no",
+    "startPolicy": "1",
+    "state": 1,
+    "stateLang": "运行中",
+    "title": "测试机 A",
+    "totalDiskStat": {
+      "rdBytesPerSec": 0,
+      "rdReqPerSec": 0,
+      "readBytes": "0Byte/s",
+      "wrBytesPerSec": 0,
+      "wrReqPerSec": 0,
+      "writeBytes": "0Byte/s"
+    },
+    "totalInterfaceStat": {
+      "receiveBytes": "0Byte/s",
+      "rxBytesPerSec": 0,
+      "rxPacketsPerSec": 0,
+      "sendBytes": "0Byte/s",
+      "txBytesPerSec": 0,
+      "txPacketsPerSec": 0
+    },
+    "uuid": "56453370-30e5-4356-9707-a1df1f4d8010",
+    "videoType": "virtio",
+    "vnc": [
+      "10.0.0.1:15566",
+      "192.168.1.170:15566",
+      "192.168.1.14:15566"
+    ],
+    "vncPasswordEnable": "[REDACTED]",
+    "vncPort": 15566
+  }
+}

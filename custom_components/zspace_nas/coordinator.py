@@ -31,6 +31,7 @@ from .zspace.normalize import (
     normalize_storage,
     normalize_system,
     normalize_vms,
+    vm_items,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -172,4 +173,22 @@ class VmCoordinator(ZspaceBaseCoordinator):
 
     async def _fetch(self) -> VmData:
         raw = await self.client.async_call("ops", "vm", {})
-        return normalize_vms(raw)
+        items = vm_items(raw)
+        if not items:
+            return VmData()
+
+        # 列表里没有磁盘虚拟容量和 VNC 地址列，逐台补一次详情；
+        # 单台失败只丢那台的详情，不影响整张表。
+        merged: list[dict] = []
+        for item in items:
+            name = item.get("name")
+            detail: object = None
+            if name:
+                try:
+                    detail = await self.client.async_call("ops", "vm", {"vm_id": name})
+                except ZspaceError as err:
+                    _LOGGER.debug("虚拟机 %s 的详情不可用：%s", name, err)
+            if isinstance(detail, list) and detail:
+                detail = detail[0]
+            merged.append({**item, **(detail if isinstance(detail, dict) else {})})
+        return normalize_vms(merged)
