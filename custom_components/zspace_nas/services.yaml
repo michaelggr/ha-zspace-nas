@@ -75,3 +75,30 @@ container_logs:
       required: false
       selector:
         text:
+
+vnc_url:
+  name: 虚拟机控制台链接
+  description: 为指定虚拟机签一个带过期时间的控制台链接（默认 12 小时），在「查看响应」里取 url。
+  fields:
+    vm:
+      name: 虚拟机
+      description: VM 名称或标题（如 HomeAssistant）。
+      required: true
+      example: HomeAssistant
+      selector:
+        text:
+    hours:
+      name: 有效期（小时）
+      required: false
+      default: 12
+      selector:
+        number:
+          min: 1
+          max: 168
+          unit_of_measurement: h
+    entry_id:
+      name: 设备标识
+      description: 多台极空间时可指定，留空自动按虚拟机名匹配。
+      required: false
+      selector:
+        text:

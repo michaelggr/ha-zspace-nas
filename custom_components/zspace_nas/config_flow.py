@@ -33,6 +33,8 @@ from .const import (
     CONF_SHORT_IDS,
     CONF_STORAGE_INTERVAL,
     CONF_VM_INTERVAL,
+    CONF_VNC_CONSOLE,
+    CONF_VNC_HOST,
     CONF_SYSTEM_INTERVAL,
     CONF_WEB_URL,
     DEFAULT_BINARY,
@@ -245,6 +247,12 @@ class ZspaceNasOptionsFlow(OptionsFlow):
                 vol.Optional(
                     CONF_SHORT_IDS, default=options.get(CONF_SHORT_IDS, False)
                 ): selector.BooleanSelector(),
+                vol.Optional(
+                    CONF_VNC_CONSOLE, default=options.get(CONF_VNC_CONSOLE, False)
+                ): selector.BooleanSelector(),
+                vol.Optional(
+                    CONF_VNC_HOST, default=options.get(CONF_VNC_HOST, "")
+                ): selector.TextSelector(),
                 vol.Optional(
                     CONF_PROTECTED, default=options.get(CONF_PROTECTED, "")
                 ): selector.TextSelector(),

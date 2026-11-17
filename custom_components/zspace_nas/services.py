@@ -24,8 +24,10 @@ from .const import (
     DOMAIN,
     SERVICE_CONTAINER_ACTION,
     SERVICE_CONTAINER_LOGS,
+    SERVICE_VNC_URL,
     SERVICE_DUMP_RAW,
 )
+from .vnc import console_url
 from .zspace.normalize import normalize_logs
 from .zspace import ZspaceError
 
@@ -36,6 +38,14 @@ CONTAINER_SCHEMA = vol.Schema(
         vol.Required(ATTR_CONTAINER_ID): cv.string,
         vol.Required(ATTR_ACTION): vol.In(ALLOWED_CONTAINER_ACTIONS),
         vol.Optional("entry_id"): cv.string,
+    }
+)
+
+VNC_URL_SCHEMA = vol.Schema(
+    {
+        vol.Required("vm"): cv.string,
+        vol.Optional("entry_id"): cv.string,
+        vol.Optional("hours", default=12): vol.All(int, vol.Range(min=1, max=168)),
     }
 )
 
@@ -179,6 +189,47 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         return result
 
+    async def _handle_vnc_url(call: ServiceCall) -> dict[str, Any]:
+        """签一个虚拟机控制台链接（带过期时间）。
+
+        返回值里的 url 只能本人用：链接本身就是一个短期凭证，别贴到公开群里。
+        """
+        vm_name = call.data["vm"]
+        entry_id = call.data.get("entry_id")
+        hours = int(call.data.get("hours", 12))
+
+        runtimes = [
+            item
+            for item in (hass.data.get(DOMAIN) or {}).values()
+            if hasattr(item, "vm")
+        ]
+        runtime = None
+        for item in runtimes:
+            if entry_id and item.entry_id != entry_id:
+                continue
+            data = item.vm.data
+            if data and any(vm.name == vm_name or vm.title == vm_name for vm in data.vms):
+                runtime = item
+                break
+        if runtime is None:
+            raise ServiceValidationError(f"没找到虚拟机 {vm_name}")
+        if not runtime.vnc_enabled:
+            raise ServiceValidationError(
+                "控制台未开启，请到集成选项里打开「虚拟机控制台」"
+            )
+
+        target = vm_name
+        data = runtime.vm.data
+        for vm in (data.vms if data else []):
+            if vm_name in (vm.name, vm.title):
+                target = vm.name
+                break
+
+        url = console_url(hass, runtime, target, hours)
+        if not url:
+            raise ServiceValidationError("当前没有可用的控制台密钥，请重载集成")
+        return {"url": url, "vm": target, "expires_hours": hours}
+
     async def _handle_dump_raw(call: ServiceCall) -> dict[str, Any]:
         """把某个能力调用的原始 JSON 落盘，用于核对字段结构。"""
         runtime = _first_runtime(hass, call.data.get("entry_id"))
@@ -208,7 +259,16 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
     hass.services.async_register(
         DOMAIN,
+        SERVICE_VNC_URL,
+        _handle_vnc_url,
+        schema=VNC_URL_SCHEMA,
+        supports_response=SupportsResponse.ONLY,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
         SERVICE_CONTAINER_LOGS,
+    SERVICE_VNC_URL,
         _handle_container_logs,
         schema=LOGS_SCHEMA,
         supports_response=SupportsResponse.OPTIONAL,

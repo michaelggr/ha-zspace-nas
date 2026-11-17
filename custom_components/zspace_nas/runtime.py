@@ -33,6 +33,11 @@ class ZspaceRuntime:
     allow_control: bool
     # 是否启用短英文 entity_id（选项 short_entity_ids）
     short_ids: bool = False
+    # 虚拟机控制台：是否开启、签名密钥、优先使用的 VNC 主机
+    entry_id: str = ""
+    vnc_enabled: bool = False
+    vnc_secret: bytes = b""
+    vnc_host: str | None = None
 
     @property
     def coordinators(self) -> tuple:

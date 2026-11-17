@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import timedelta
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from homeassistant.helpers.event import async_track_time_interval
 
 from .const import (
     CONF_ALLOW_CONTROL,
@@ -26,6 +28,8 @@ from .const import (
     CONF_PROFILE,
     CONF_PROFILE_HOME,
     CONF_STORAGE_INTERVAL,
+    CONF_VNC_CONSOLE,
+    CONF_VNC_HOST,
     CONF_VM_INTERVAL,
     CONF_SYSTEM_INTERVAL,
     CONF_WEB_URL,
@@ -59,6 +63,8 @@ from .entity import (
 from .runtime import ZspaceRuntime
 from .safety import SafetyGuard, build_policy
 from .services import async_setup_services
+from .vnc import async_register as async_register_vnc
+from .vnc import async_update_device_urls, load_secret
 from .zspace import ZspaceAuthError, ZspaceCliClient, ZspaceError, ZspaceUnavailableError
 from .zspace.base import pick
 from .zspace.normalize import normalize_system
@@ -150,6 +156,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
     )
 
+    vnc_enabled = bool(options.get(CONF_VNC_CONSOLE, False))
+    vnc_secret = (
+        await hass.async_add_executor_job(load_secret, hass) if vnc_enabled else b""
+    )
+
     runtime = ZspaceRuntime(
         client=client,
         identifier=identifier,
@@ -163,6 +174,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         guard=guard,
         allow_control=allow_control,
         short_ids=bool(options.get(CONF_SHORT_IDS, False)),
+        entry_id=entry.entry_id,
+        vnc_enabled=vnc_enabled,
+        vnc_secret=vnc_secret,
+        vnc_host=(options.get(CONF_VNC_HOST) or "").strip() or None,
     )
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = runtime
 
@@ -171,6 +186,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await async_setup_services(hass)
+
+    if vnc_enabled:
+        # 静态目录 + 两个视图全局只注册一次，设备链接在实体建好后写进去
+        await async_register_vnc(hass)
+        async_update_device_urls(hass, entry.entry_id, runtime)
+
+        def _refresh_console_urls(_now: object) -> None:
+            # 令牌会过期，每 6 小时续一次签名，设备页的「访问」保持可用
+            async_update_device_urls(hass, entry.entry_id, runtime)
+
+        entry.async_on_unload(
+            async_track_time_interval(hass, _refresh_console_urls, timedelta(hours=6))
+        )
 
     entry.async_on_unload(entry.add_update_listener(_async_reload_entry))
     return True
