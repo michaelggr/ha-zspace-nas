@@ -20,6 +20,7 @@ from .const import (
     CONF_DOWNLOAD_INTERVAL,
     CONF_DRY_RUN,
     CONF_PROTECTED,
+    CONF_SHORT_IDS,
     CONF_DOCKER_INTERVAL,
     CONF_HOST,
     CONF_PROFILE,
@@ -149,6 +150,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         tasks=tasks,
         guard=guard,
         allow_control=allow_control,
+        short_ids=bool(options.get(CONF_SHORT_IDS, False)),
     )
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = runtime
 

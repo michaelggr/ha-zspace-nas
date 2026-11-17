@@ -13,24 +13,38 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import ContainerInfo, DiskInfo
-from .entity import ZspaceEntity, container_device_info, find_container
+from .entity import (
+    ZspaceEntity,
+    async_forget_entity,
+    container_device_info,
+    find_container,
+)
+from .naming import token_or_hash
 from .runtime import ZspaceRuntime
 
 
 class ContainerRunningSensor(ZspaceEntity, BinarySensorEntity):
     """每个容器一个运行态传感器。"""
 
+    _platform_domain = "binary_sensor"
     _attr_device_class = BinarySensorDeviceClass.RUNNING
 
     def __init__(self, runtime: ZspaceRuntime, container: ContainerInfo) -> None:
+        # 先就位：基类构造时会用它推 entity_id
+        self._container_id = container.id or container.name
+        self._container_name = container.name
         super().__init__(
             runtime, runtime.docker, f"container_{container.id[:12] or container.name}_running"
         )
-        self._container_id = container.id or container.name
         self._attr_name = "运行中"
         self._container_device = container_device_info(
             runtime, self._container_id, container.name, container.image
         )
+
+    def _entity_id_parts(self) -> tuple[str, ...]:
+        # 容器名优先，纯中文名退回稳定哈希
+        name = getattr(self, "_container_name", "") or self._container_id
+        return (token_or_hash(name), "running")
 
     @property
     def container_key(self) -> str:
@@ -74,6 +88,7 @@ class ContainerRunningSensor(ZspaceEntity, BinarySensorEntity):
 class DockerEngineSensor(ZspaceEntity, BinarySensorEntity):
     """Docker 引擎是否在运行。"""
 
+    _platform_domain = "binary_sensor"
     _attr_device_class = BinarySensorDeviceClass.RUNNING
     _attr_name = "Docker 引擎"
 
@@ -88,6 +103,7 @@ class DockerEngineSensor(ZspaceEntity, BinarySensorEntity):
 class DiskHealthSensor(ZspaceEntity, BinarySensorEntity):
     """SMART 健康状态：非 ok 即告警。"""
 
+    _platform_domain = "binary_sensor"
     _attr_device_class = BinarySensorDeviceClass.PROBLEM
 
     def __init__(self, runtime: ZspaceRuntime, disk: DiskInfo) -> None:
@@ -160,7 +176,7 @@ async def async_setup_entry(
         }
 
         for key in [key for key in tracked if key not in current]:
-            hass.async_create_task(tracked.pop(key).async_remove())
+            hass.async_create_task(async_forget_entity(hass, tracked.pop(key)))
 
         fresh = [
             ContainerRunningSensor(runtime, container)

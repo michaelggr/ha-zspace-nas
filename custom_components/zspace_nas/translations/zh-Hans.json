@@ -46,6 +46,7 @@
         "data": {
           "allow_control": "允许容器控制",
           "web_url": "极空间网页地址（可选）",
+          "short_entity_ids": "短英文实体 ID",
           "allowed_containers": "允许控制的容器",
           "dry_run": "演练模式（只记录不执行）",
           "protected_containers": "额外保护的容器",
@@ -64,7 +65,8 @@
           "action_cooldown": "防止脚本或误触连续操作同一个容器。",
           "download_interval": "下载任务变化较慢，默认 5 分钟。",
           "disk_interval": "SMART 需要逐盘查询（单盘约 0.4 秒），默认 1 小时。",
-          "web_url": "填了就变成设备的「访问」链接，例如 http://192.168.1.10:5055。留空则不显示。"
+          "web_url": "填了就变成设备的「访问」链接，例如 http://192.168.1.10:5055。留空则不显示。",
+          "short_entity_ids": "开启后实体 ID 从拼音改为 zspace_cpu_usage 这种英文形式（显示名不变）。写入面板或自动化里的旧 ID 会失效，需要同步更新；迁移不可逆。"
         }
       }
     }

@@ -31,6 +31,7 @@ ValueFn = Callable[[Any], Any]
 class ZspaceSensor(ZspaceEntity, SensorEntity):
     """通用只读传感器。"""
 
+    _platform_domain = "sensor"
     _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(
@@ -73,6 +74,9 @@ class PoolSensor(ZspaceSensor):
 
     前端不用再逐盘查实体，一张卡就能画出「真机前面板」的盘位格。
     """
+
+    # 成员盘列表只在前端/模板用，不写 recorder（省历史库体积）
+    _unrecorded_attributes = frozenset({"disks"})
 
     def __init__(
         self,

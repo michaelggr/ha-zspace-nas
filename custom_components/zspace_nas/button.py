@@ -13,7 +13,13 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import ContainerInfo
-from .entity import ZspaceEntity, container_device_info, find_container
+from .entity import (
+    ZspaceEntity,
+    async_forget_entity,
+    container_device_info,
+    find_container,
+)
+from .naming import token_or_hash
 from .runtime import ZspaceRuntime
 from .zspace import ZspaceError
 
@@ -21,17 +27,28 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class ContainerRestartButton(ZspaceEntity, ButtonEntity):
+    _platform_domain = "button"
     _attr_icon = "mdi:restart"
 
     def __init__(self, runtime: ZspaceRuntime, container: ContainerInfo) -> None:
+        # 先就位：基类构造时会用它推 entity_id
+        self._container_id = container.id or container.name
+        self._container_name = container.name
         super().__init__(
             runtime, runtime.docker, f"container_{container.id[:12] or container.name}_restart"
         )
-        self._container_id = container.id or container.name
         self._attr_name = f"{container.name} 重启"
         self._container_device = container_device_info(
             runtime, self._container_id, container.name, container.image
         )
+
+    def _entity_id_parts(self) -> tuple[str, ...]:
+        name = getattr(self, "_container_name", "") or self._container_id
+        return (token_or_hash(name), "restart")
+
+    @property
+    def container_key(self) -> str:
+        return self._container_id
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -92,19 +109,44 @@ async def async_setup_entry(
     if not runtime.allow_control:
         return
 
-    data = runtime.docker.data
-    if not data:
-        return
+    def _targets() -> dict[str, ContainerInfo]:
+        data = runtime.docker.data
+        if not data:
+            return {}
+        return {
+            container.id or container.name: container
+            for container in data.containers
+            if runtime.guard.is_allowed(container.name, container.id)
+        }
 
-    targets = [
-        container
-        for container in data.containers
-        if runtime.guard.is_allowed(container.name, container.id)
-    ]
-    if not targets:
-        return
+    tracked: dict[str, ContainerRestartButton] = {}
+    initial: list[ContainerRestartButton] = []
+    for key, container in _targets().items():
+        entity = ContainerRestartButton(runtime, container)
+        tracked[key] = entity
+        initial.append(entity)
 
-    async_add_entities(
-        (ContainerRestartButton(runtime, container) for container in targets),
-        update_before_add=False,
-    )
+    if initial:
+        async_add_entities(initial, update_before_add=False)
+
+    def _sync_buttons() -> None:
+        """容器增删跟着走：新容器补按钮，消失的连注册表一起清掉。"""
+        current = _targets()
+        if runtime.docker.data is None:
+            return
+
+        for key in [key for key in tracked if key not in current]:
+            hass.async_create_task(async_forget_entity(hass, tracked.pop(key)))
+
+        fresh = [
+            ContainerRestartButton(runtime, container)
+            for key, container in current.items()
+            if key not in tracked
+        ]
+        if not fresh:
+            return
+        for entity in fresh:
+            tracked[entity.container_key] = entity
+        async_add_entities(fresh, update_before_add=False)
+
+    entry.async_on_unload(runtime.docker.async_add_listener(_sync_buttons))

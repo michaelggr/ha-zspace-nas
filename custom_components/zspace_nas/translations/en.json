@@ -46,6 +46,7 @@
         "data": {
           "allow_control": "Allow container control",
           "web_url": "ZSpace web address (optional)",
+          "short_entity_ids": "Short English entity IDs",
           "allowed_containers": "Containers allowed to control",
           "dry_run": "Dry run (log only, do not execute)",
           "protected_containers": "Extra protected containers",
@@ -64,7 +65,8 @@
           "action_cooldown": "Prevents scripts or double taps from hammering the same container.",
           "download_interval": "Download tasks change slowly, 5 minutes by default.",
           "disk_interval": "SMART is queried per disk (~0.4s each), 1 hour by default.",
-          "web_url": "Shown as the device Visit link, e.g. http://192.168.1.10:5055. Empty hides it."
+          "web_url": "Shown as the device Visit link, e.g. http://192.168.1.10:5055. Empty hides it.",
+          "short_entity_ids": "Renames entity IDs from pinyin to short English like zspace_cpu_usage (display names unchanged). Old IDs used in dashboards/automations will break; not reversible."
         }
       }
     }

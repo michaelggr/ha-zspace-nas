@@ -19,7 +19,13 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import ContainerInfo
-from .entity import ZspaceEntity, container_device_info, find_container
+from .entity import (
+    ZspaceEntity,
+    async_forget_entity,
+    container_device_info,
+    find_container,
+)
+from .naming import token_or_hash
 from .runtime import ZspaceRuntime
 from .zspace import ZspaceError
 
@@ -29,19 +35,26 @@ _LOGGER = logging.getLogger(__name__)
 class ContainerSwitch(ZspaceEntity, SwitchEntity):
     """一个容器一个开关，带乐观状态避免点击后短暂回弹。"""
 
+    _platform_domain = "switch"
     _attr_icon = "mdi:docker"
 
     def __init__(self, runtime: ZspaceRuntime, container: ContainerInfo) -> None:
+        # 先就位：基类构造时会用它推 entity_id
+        self._container_id = container.id or container.name
+        self._container_name = container.name
         super().__init__(
             runtime, runtime.docker, f"container_{container.id[:12] or container.name}_power"
         )
-        self._container_id = container.id or container.name
         # 容器本身就是设备，开关作为主实体，不再重复容器名
         self._attr_name = None
         self._container_device = container_device_info(
             runtime, self._container_id, container.name, container.image
         )
         self._pending: bool | None = None
+
+    def _entity_id_parts(self) -> tuple[str, ...]:
+        name = getattr(self, "_container_name", "") or self._container_id
+        return (token_or_hash(name),)
 
     @property
     def container_key(self) -> str:
@@ -169,7 +182,7 @@ async def async_setup_entry(
         }
 
         for key in [key for key in tracked if key not in current]:
-            hass.async_create_task(tracked.pop(key).async_remove())
+            hass.async_create_task(async_forget_entity(hass, tracked.pop(key)))
 
         fresh = [
             ContainerSwitch(runtime, container)

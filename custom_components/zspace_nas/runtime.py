@@ -29,6 +29,8 @@ class ZspaceRuntime:
     tasks: TaskCoordinator
     guard: SafetyGuard
     allow_control: bool
+    # 是否启用短英文 entity_id（选项 short_entity_ids）
+    short_ids: bool = False
 
     @property
     def coordinators(self) -> tuple:

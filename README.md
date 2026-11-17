@@ -69,6 +69,30 @@ Docker 每轮刷新（默认 30 秒）后会比对容器清单：
 选项里填「极空间网页地址」（例如 `http://192.168.1.10:5055`），NAS 设备页右上角会出现「访问」，
 一键跳到极空间自己的 Web 页面。留空则不显示，不影响其它功能。
 
+## 实体 ID 命名（可选）
+
+默认沿用 HA 的规则：显示名是中文，entity_id 就是拼音——`sensor.ji_kong_jian_z4pro_cpu_shi_yong_lu`。
+写模板时很难用。
+
+选项里打开「短英文实体 ID」后，实体会自动迁移成：
+
+| 类型 | 之前 | 之后 |
+| --- | --- | --- |
+| 主机 | `sensor.ji_kong_jian_z4pro_cpu_shi_yong_lu` | `sensor.zspace_cpu_usage` |
+| 存储池 | `sensor.…_cun_chu_chi_sata11_shi_yong_lu` | `sensor.zspace_pool_sata11_usage` |
+| 磁盘 | `sensor.…_ci_pan_zw61gzgt_wen_du` | `sensor.zspace_disk_zw61gzgt_temperature` |
+| 容器运行态 | `binary_sensor.qbittorrent_yun_xing_zhong` | `binary_sensor.zspace_qbittorrent_running` |
+| 容器开关 | `switch.qbittorrent` | `switch.zspace_qbittorrent` |
+
+**显示名不变**，只有 entity_id 变。迁移走实体注册表改名，唯一 ID、历史与统计都保留；
+目标 ID 被占用时自动退到 `_2`、`_3`，不会抢别人的号。
+
+⚠️ 两点要注意：
+
+1. **不可逆**——ID 改完就是永久的，关掉选项不会改回去。
+2. **面板/自动化里的旧 ID 会失效**，需要同步更新。用 auto-entities 按集成过滤的地方不受影响，
+   写死 entity_id 的卡片（apexcharts、mushroom、bar-card）要一处处换。
+
 ## 安装
 
 **HACS**：HACS → 集成 → 右上角三点 → 自定义存储库 → 粘贴
