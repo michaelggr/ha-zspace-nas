@@ -62,6 +62,7 @@ def build_device_info(
     model: str | None,
     serial: str | None,
     version: str | None,
+    web_url: str | None = None,
 ) -> DeviceInfo:
     """把探活拿到的型号/序列号变成 HA 设备。"""
     return DeviceInfo(
@@ -71,6 +72,8 @@ def build_device_info(
         model=model,
         serial_number=serial,
         sw_version=version,
+        # 设备页右上角出现「访问」，直接跳到极空间自己的 Web 页面
+        configuration_url=web_url or None,
     )
 
 

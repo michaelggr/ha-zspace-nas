@@ -18,6 +18,7 @@ CONF_DRY_RUN = "dry_run"
 CONF_COOLDOWN = "action_cooldown"
 CONF_PROTECTED = "protected_containers"
 CONF_ALLOWED = "allowed_containers"
+CONF_WEB_URL = "web_url"
 CONF_DOCKER_INTERVAL = "docker_interval"
 CONF_SYSTEM_INTERVAL = "system_interval"
 CONF_STORAGE_INTERVAL = "storage_interval"
@@ -29,6 +30,8 @@ CONF_DOWNLOAD_INTERVAL = "download_interval"
 DEFAULT_BINARY = ""
 DEFAULT_PROFILE_HOME = "/config/zspace_nas/profile"
 DEFAULT_PROFILE = "ha"
+# 极空间 Web 管理地址，填了就变成设备的「访问」链接
+DEFAULT_WEB_URL = ""
 
 # ── 轮询周期：分级，避免一个慢接口拖垮全部实体 ──────────
 DEFAULT_DOCKER_INTERVAL = 30

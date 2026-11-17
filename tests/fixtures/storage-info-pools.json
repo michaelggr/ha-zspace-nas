@@ -1,0 +1,67 @@
+{
+  "pool_list": [
+    {
+      "name": "sata11",
+      "id": 11,
+      "status": "ok",
+      "pool_type": "zdr",
+      "total_size": 8001574060032,
+      "free_size": 2446262964224,
+      "usage_size": 5555311095808,
+      "disk_list": [
+        {
+          "pos": 1,
+          "model": "ST4000VN006-3CW104",
+          "sn": "DISK0001",
+          "dev_type": "SATA",
+          "health": "ok",
+          "total_size": 4000787030016,
+          "usage_size": 1966933143552,
+          "temp": 29,
+          "simple_smart": {
+            "power_on_hours": 24191,
+            "reallocated_sector_count": 0
+          }
+        },
+        {
+          "pos": 3,
+          "model": "ST4000VN008-2DR166",
+          "sn": "DISK0002",
+          "dev_type": "SATA",
+          "health": "ok",
+          "total_size": 4000787030016,
+          "usage_size": 1966933143552,
+          "temp": 25,
+          "simple_smart": {
+            "power_on_hours": 3907,
+            "reallocated_sector_count": 8
+          }
+        }
+      ]
+    },
+    {
+      "name": "sata13",
+      "id": 13,
+      "status": "ok",
+      "pool_type": "single",
+      "total_size": 10002048860160,
+      "free_size": 9972895121408,
+      "usage_size": 29153738752,
+      "disk_list": [
+        {
+          "pos": 2,
+          "model": "WUS721010ALE6L4",
+          "sn": "DISK0003",
+          "dev_type": "SATA",
+          "health": "ok",
+          "total_size": 10002048860160,
+          "usage_size": 29153738752,
+          "temp": 33,
+          "simple_smart": {
+            "power_on_hours": 207
+          }
+        }
+      ]
+    }
+  ]
+}

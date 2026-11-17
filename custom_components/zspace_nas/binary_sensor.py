@@ -33,6 +33,10 @@ class ContainerRunningSensor(ZspaceEntity, BinarySensorEntity):
         )
 
     @property
+    def container_key(self) -> str:
+        return self._container_id
+
+    @property
     def device_info(self) -> DeviceInfo:
         return self._container_device
 
@@ -136,6 +140,37 @@ async def async_setup_entry(
     data = runtime.docker.data
     if data:
         entities.append(DockerEngineSensor(runtime))
-        entities.extend(ContainerRunningSensor(runtime, c) for c in data.containers)
+
+    # 容器实体登记表：新增容器自动补齐，消失的容器自动移除
+    tracked: dict[str, ContainerRunningSensor] = {}
+    for container in (data.containers if data else []):
+        entity = ContainerRunningSensor(runtime, container)
+        tracked[entity.container_key] = entity
+        entities.append(entity)
 
     async_add_entities(entities, update_before_add=False)
+
+    def _sync_containers() -> None:
+        """每次 Docker 刷新后对齐实体：新容器建实体，消失的容器删实体。"""
+        latest = runtime.docker.data
+        if latest is None:
+            return
+        current = {
+            container.id or container.name: container for container in latest.containers
+        }
+
+        for key in [key for key in tracked if key not in current]:
+            hass.async_create_task(tracked.pop(key).async_remove())
+
+        fresh = [
+            ContainerRunningSensor(runtime, container)
+            for key, container in current.items()
+            if key not in tracked
+        ]
+        if not fresh:
+            return
+        for entity in fresh:
+            tracked[entity.container_key] = entity
+        async_add_entities(fresh, update_before_add=False)
+
+    entry.async_on_unload(runtime.docker.async_add_listener(_sync_containers))

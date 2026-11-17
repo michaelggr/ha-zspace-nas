@@ -36,6 +36,26 @@ class SystemData:
 
 
 @dataclass
+class PoolDisk:
+    """存储池里的成员盘：真机 storage info 的 disk_list 已带健康、温度、通电、重映射。"""
+
+    pos: str | None = None
+    model: str | None = None
+    sn: str | None = None
+    dev_type: str | None = None
+    health: str | None = None
+    total: int | None = None
+    used: int | None = None
+    temperature: float | None = None
+    power_on_hours: int | None = None
+    reallocated: int | None = None
+
+    @property
+    def healthy(self) -> bool:
+        return str(self.health or "").lower() in ("ok", "good", "normal", "")
+
+
+@dataclass
 class PoolInfo:
     key: str
     name: str
@@ -45,6 +65,7 @@ class PoolInfo:
     usage: float | None = None
     status: str | None = None
     pool_type: str | None = None
+    disks: list[PoolDisk] = field(default_factory=list)
 
 
 @dataclass
@@ -133,6 +154,30 @@ def normalize_system(raw: object) -> SystemData:
     )
 
 
+def _pool_disks(raw: object) -> list[PoolDisk]:
+    """盘位信息：pos 是槽位号，simple_smart 里有通电时长与重映射。"""
+    disks: list[PoolDisk] = []
+    for item in raw if isinstance(raw, list) else []:
+        if not isinstance(item, dict):
+            continue
+        smart = item.get("simple_smart") if isinstance(item.get("simple_smart"), dict) else {}
+        disks.append(
+            PoolDisk(
+                pos=str(item.get("pos")) if item.get("pos") is not None else None,
+                model=str(item.get("model")) if item.get("model") else None,
+                sn=str(item.get("sn")) if item.get("sn") else None,
+                dev_type=str(item.get("dev_type")) if item.get("dev_type") else None,
+                health=str(item.get("health")) if item.get("health") else None,
+                total=as_bytes(item.get("total_size")),
+                used=as_bytes(item.get("usage_size")),
+                temperature=as_float(item.get("temp")),
+                power_on_hours=as_int(smart.get("power_on_hours")),
+                reallocated=as_int(smart.get("reallocated_sector_count")),
+            )
+        )
+    return sorted(disks, key=lambda d: int(d.pos) if (d.pos or "").isdigit() else 99)
+
+
 def normalize_storage(raw: object) -> StorageData:
     pools_raw = as_list(raw, keys=("pool_list", "pools", "list", "items"))
     pools: list[PoolInfo] = []
@@ -157,6 +202,7 @@ def normalize_storage(raw: object) -> StorageData:
                 usage=percentage(used, total),
                 status=str(item.get("status")) if item.get("status") else None,
                 pool_type=str(item.get("pool_type")) if item.get("pool_type") else None,
+                disks=_pool_disks(item.get("disk_list")),
             )
         )
     return StorageData(pools=pools)

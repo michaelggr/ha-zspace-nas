@@ -118,6 +118,36 @@ class DockerTest(unittest.TestCase):
         self.assertIsNone(data.containers[0].cpu_usage)
 
 
+class PoolDiskTest(unittest.TestCase):
+    """存储池成员盘：真机 disk_list 里已有健康/温度/通电，不需要额外问 SMART。"""
+
+    def setUp(self) -> None:
+        self.data = normalize_storage(_load("storage-info-pools.json"))
+
+    def test_pool_has_disks(self) -> None:
+        self.assertEqual(len(self.data.pools), 2)
+        self.assertEqual(len(self.data.pools[0].disks), 2)
+        self.assertEqual(len(self.data.pools[1].disks), 1)
+
+    def test_disk_fields(self) -> None:
+        disk = self.data.pools[0].disks[0]
+        self.assertEqual(disk.pos, "1")
+        self.assertEqual(disk.model, "ST4000VN006-3CW104")
+        self.assertEqual(disk.dev_type, "SATA")
+        self.assertEqual(disk.temperature, 29)
+        self.assertEqual(disk.power_on_hours, 24191)
+        self.assertEqual(disk.reallocated, 0)
+        self.assertTrue(disk.healthy)
+        self.assertEqual(disk.total, 4000787030016)
+
+    def test_disks_sorted_by_slot(self) -> None:
+        self.assertEqual([d.pos for d in self.data.pools[0].disks], ["1", "3"])
+
+    def test_missing_reallocated(self) -> None:
+        # NVMe / 部分固件不带重映射计数，应为 None 而不是 0
+        self.assertIsNone(self.data.pools[1].disks[0].reallocated)
+
+
 class DiskTest(unittest.TestCase):
     def setUp(self) -> None:
         self.smart = normalize_smart(_load("smart-disk.json"))

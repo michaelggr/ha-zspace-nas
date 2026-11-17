@@ -32,6 +32,7 @@ from .const import (
     CONF_PROTECTED,
     CONF_STORAGE_INTERVAL,
     CONF_SYSTEM_INTERVAL,
+    CONF_WEB_URL,
     DEFAULT_BINARY,
     DEFAULT_COOLDOWN,
     DEFAULT_DISK_INTERVAL,
@@ -235,6 +236,9 @@ class ZspaceNasOptionsFlow(OptionsFlow):
                 vol.Optional(
                     CONF_DRY_RUN, default=options.get(CONF_DRY_RUN, False)
                 ): selector.BooleanSelector(),
+                vol.Optional(
+                    CONF_WEB_URL, default=options.get(CONF_WEB_URL, "")
+                ): selector.TextSelector(),
                 vol.Optional(
                     CONF_PROTECTED, default=options.get(CONF_PROTECTED, "")
                 ): selector.TextSelector(),

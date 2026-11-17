@@ -38,11 +38,20 @@
 2. 把 `dashboards/sidebar.yaml` 里的 `lovelace:` 段贴进 `/config/configuration.yaml`
 3. 重启 HA
 
+## 存储区：容量条 + 成员盘表格
+
+进度条用 `bar-card`（70% 转黄、85% 转红），下面的表格从存储池实体的 `disks` 属性里取成员盘，
+一行一块盘：槽位、型号、容量、温度、通电时长、健康。
+
+数据来自 `storage info` 的 `disk_list`，集成 v0.5.0 起才有这个属性；旧版本只显示表头。
+
 ## 设计说明
 
 - 版式用 `sections` 而不是默认的 masonry：masonry 会把每张卡塞进独立列，卡片少时会留下大片空白，且单卡宽度被硬性限制在约 420px。
 - `mini-graph-card` 在 `sections` 的固定高度里曲线会被裁切，所以 KPI 用 mushroom 磁贴，曲线统一放「趋势」页由 apexcharts 承担。
 - `auto-entities` 要用网格展示自定义卡片时，必须写 `card_param: cards`，并把卡片模板放在 filter 的 `options` 里；只写 `card.cards` 会渲染为空。
+- **markdown 卡里的内联 `style` 会被前端剥掉**（只保留结构标签）：`<table>`、`<div>`、`<details>`、`<ha-icon>` 能用，但边框、圆角、颜色写不进去。所以盘位没有做成「前面板」那种带描边的格子，改用原生表格——想上真·盘位格需要装 `card_mod` 自己注入样式。
+- 表格必须紧跟表头分隔行，中间不能有空行，否则整张表退化成纯文本。多行数据先在 Jinja 里 `append` 到列表再 `join('\n')`，比在模板里直接换行可靠。
 
 ## 前提
 

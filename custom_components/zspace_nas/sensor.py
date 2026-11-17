@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+from dataclasses import asdict
 from typing import Any, Callable
 
 from homeassistant.components.sensor import (
@@ -65,6 +66,45 @@ class ZspaceSensor(ZspaceEntity, SensorEntity):
             return self._value_fn(data)
         except (AttributeError, TypeError):
             return None
+
+
+class PoolSensor(ZspaceSensor):
+    """存储池传感器：额外把成员盘（槽位/型号/容量/温度/健康）挂到属性上。
+
+    前端不用再逐盘查实体，一张卡就能画出「真机前面板」的盘位格。
+    """
+
+    def __init__(
+        self,
+        runtime: ZspaceRuntime,
+        coordinator: ZspaceBaseCoordinator,
+        key: str,
+        name: str,
+        value_fn: ValueFn,
+        pool_key: str,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(runtime, coordinator, key, name, value_fn, **kwargs)
+        self._pool_key = pool_key
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        pool = _pool(self.coordinator.data, self._pool_key)
+        if pool is None:
+            return {}
+        return {
+            "pool_type": pool.pool_type,
+            "status": pool.status,
+            "disk_count": len(pool.disks),
+            "disks": [asdict(disk) for disk in pool.disks],
+        }
+
+
+def _pool(data: StorageData, key: str) -> Any:
+    for pool in getattr(data, "pools", []):
+        if pool.key == key:
+            return pool
+    return None
 
 
 def _pool_attr(data: StorageData, key: str, attr: str) -> Any:
@@ -195,7 +235,7 @@ async def async_setup_entry(
             key = pool.key
             entities.extend(
                 [
-                    ZspaceSensor(
+                    PoolSensor(
                         runtime,
                         runtime.storage,
                         f"pool_{key}_usage",
@@ -204,8 +244,9 @@ async def async_setup_entry(
                         unit=PERCENTAGE,
                         icon="mdi:harddisk",
                         precision=1,
+                        pool_key=key,
                     ),
-                    ZspaceSensor(
+                    PoolSensor(
                         runtime,
                         runtime.storage,
                         f"pool_{key}_used",
@@ -215,8 +256,9 @@ async def async_setup_entry(
                         device_class=SensorDeviceClass.DATA_SIZE,
                         icon="mdi:harddisk",
                         precision=2,
+                        pool_key=key,
                     ),
-                    ZspaceSensor(
+                    PoolSensor(
                         runtime,
                         runtime.storage,
                         f"pool_{key}_free",
@@ -226,6 +268,7 @@ async def async_setup_entry(
                         device_class=SensorDeviceClass.DATA_SIZE,
                         icon="mdi:harddisk",
                         precision=2,
+                        pool_key=key,
                     ),
                 ]
             )

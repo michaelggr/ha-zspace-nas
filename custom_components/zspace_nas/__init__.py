@@ -26,6 +26,7 @@ from .const import (
     CONF_PROFILE_HOME,
     CONF_STORAGE_INTERVAL,
     CONF_SYSTEM_INTERVAL,
+    CONF_WEB_URL,
     DEFAULT_BINARY,
     DEFAULT_COOLDOWN,
     DEFAULT_DISK_INTERVAL,
@@ -33,6 +34,7 @@ from .const import (
     DEFAULT_DOWNLOAD_INTERVAL,
     DEFAULT_PROFILE,
     DEFAULT_PROFILE_HOME,
+    DEFAULT_WEB_URL,
     DEFAULT_STORAGE_INTERVAL,
     DEFAULT_SYSTEM_INTERVAL,
     DOMAIN,
@@ -88,6 +90,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         str(model) if model else None,
         str(serial) if serial else None,
         str(version) if version else None,
+        entry.options.get(CONF_WEB_URL) or DEFAULT_WEB_URL or None,
     )
 
     options = entry.options

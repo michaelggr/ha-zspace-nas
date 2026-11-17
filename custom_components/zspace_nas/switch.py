@@ -44,6 +44,10 @@ class ContainerSwitch(ZspaceEntity, SwitchEntity):
         self._pending: bool | None = None
 
     @property
+    def container_key(self) -> str:
+        return self._container_id
+
+    @property
     def device_info(self) -> DeviceInfo:
         return self._container_device
 
@@ -123,6 +127,18 @@ class ContainerSwitch(ZspaceEntity, SwitchEntity):
         super()._handle_coordinator_update()
 
 
+def _allowed_containers(runtime: ZspaceRuntime) -> list[ContainerInfo]:
+    """当前允许建开关的容器：白名单命中才建，默认一个都不建。"""
+    data = runtime.docker.data
+    if not data:
+        return []
+    return [
+        container
+        for container in data.containers
+        if runtime.guard.is_allowed(container.name, container.id)
+    ]
+
+
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
@@ -131,20 +147,39 @@ async def async_setup_entry(
         # 未在选项里开启控制时不生成实体，避免误触
         return
 
-    data = runtime.docker.data
-    if not data:
-        return
+    tracked: dict[str, ContainerSwitch] = {}
+    initial: list[ContainerSwitch] = []
+    for container in _allowed_containers(runtime):
+        entity = ContainerSwitch(runtime, container)
+        tracked[entity.container_key] = entity
+        initial.append(entity)
 
-    # 只给白名单里的容器建实体：默认名单为空时，一个开关都不会出现
-    targets = [
-        container
-        for container in data.containers
-        if runtime.guard.is_allowed(container.name, container.id)
-    ]
-    if not targets:
-        return
+    if initial:
+        async_add_entities(initial, update_before_add=False)
 
-    async_add_entities(
-        (ContainerSwitch(runtime, container) for container in targets),
-        update_before_add=False,
-    )
+    def _sync_switches() -> None:
+        """新容器命中白名单就补一个开关，容器没了就撤掉开关。"""
+        latest = runtime.docker.data
+        if latest is None:
+            return
+        current = {
+            container.id or container.name: container
+            for container in latest.containers
+            if runtime.guard.is_allowed(container.name, container.id)
+        }
+
+        for key in [key for key in tracked if key not in current]:
+            hass.async_create_task(tracked.pop(key).async_remove())
+
+        fresh = [
+            ContainerSwitch(runtime, container)
+            for key, container in current.items()
+            if key not in tracked
+        ]
+        if not fresh:
+            return
+        for entity in fresh:
+            tracked[entity.container_key] = entity
+        async_add_entities(fresh, update_before_add=False)
+
+    entry.async_on_unload(runtime.docker.async_add_listener(_sync_switches))
