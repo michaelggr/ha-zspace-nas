@@ -67,23 +67,50 @@ def load_secret(hass: HomeAssistant) -> bytes:
 
 
 # ── 地址选择 ────────────────────────────────────────────
-def pick_endpoint(runtime: Any, vm: Any) -> tuple[str, int] | None:
-    """挑一个能用 VNC 地址：优先非内部网段，端口兜底用实体上的 vnc_port。"""
-    preferred = getattr(runtime, "vnc_host", None)
+def candidate_endpoints(runtime: Any, vm: Any) -> list[tuple[str, int]]:
+    """列出所有可能的 VNC 地址，按可达优先级排序、去重。
+
+    为什么不用单个地址：真机 `ops vm` 会给多个地址（如 10.222.x 内部桥接、
+    192.168.x 局域网），第一个往往连不通。逐个尝试才能自动落到可用的那个。
+    排序：手动指定的 vnc_host > 非内部网段 > 内部桥接网段（兜底）。
+    """
     port = getattr(vm, "vnc_port", None)
+    preferred = getattr(runtime, "vnc_host", None)
+    candidates: list[tuple[str, int]] = []
+
+    def add(host: str | None, raw_port: Any) -> None:
+        try:
+            pair = (str(host), int(raw_port))
+        except (TypeError, ValueError):
+            return
+        if pair not in candidates:
+            candidates.append(pair)
+
+    # 1) 手动指定的 host 最优先
     if preferred and port:
-        return preferred, int(port)
-    for endpoint in getattr(vm, "vnc_endpoints", []) or []:
+        add(preferred, port)
+    endpoints = getattr(vm, "vnc_endpoints", []) or []
+    # 2) 局域网地址（非 10.222. 内部桥接网段）
+    for endpoint in endpoints:
+        if ":" not in endpoint:
+            continue
+        host, _, raw_port = endpoint.rpartition(":")
+        if not host.startswith(_INTERNAL_PREFIX):
+            add(host, raw_port)
+    # 3) 内部桥接地址兜底（HA 若跑在 NAS 内部网络才可达）
+    for endpoint in endpoints:
         if ":" not in endpoint:
             continue
         host, _, raw_port = endpoint.rpartition(":")
         if host.startswith(_INTERNAL_PREFIX):
-            continue
-        try:
-            return host, int(raw_port)
-        except ValueError:
-            continue
-    return None
+            add(host, raw_port)
+    return candidates
+
+
+def pick_endpoint(runtime: Any, vm: Any) -> tuple[str, int] | None:
+    """取首选 VNC 地址（兼容旧调用）；实际连接用 candidate_endpoints 逐个尝试。"""
+    candidates = candidate_endpoints(runtime, vm)
+    return candidates[0] if candidates else None
 
 
 def console_url(
@@ -159,18 +186,26 @@ class VncBridgeView(HomeAssistantView):
         if runtime is None:
             return web.Response(status=403, text="链接无效或已过期")
 
-        endpoint = pick_endpoint(runtime, vm)
-        if endpoint is None:
+        candidates = candidate_endpoints(runtime, vm)
+        if not candidates:
             return web.Response(status=503, text="这台虚拟机没有可用的 VNC 地址（是否未启用 VNC？）")
-        host, port = endpoint
 
-        try:
-            reader, writer = await asyncio.wait_for(
-                asyncio.open_connection(host, port), timeout=10
-            )
-        except (OSError, asyncio.TimeoutError) as err:
-            _LOGGER.warning("连不上虚拟机 %s 的 VNC %s:%s：%s", vm.name, host, port, err)
-            return web.Response(status=502, text=f"无法连接 VNC 服务：{err}")
+        # 逐个候选尝试连接，首个连通的即用（真机多地址里第一个常不可达）
+        reader = writer = None
+        last_err: BaseException | None = None
+        for host, port in candidates:
+            try:
+                reader, writer = await asyncio.wait_for(
+                    asyncio.open_connection(host, port), timeout=5
+                )
+                _LOGGER.debug("虚拟机 %s 的 VNC 已连接 %s:%s", vm.name, host, port)
+                break
+            except (OSError, asyncio.TimeoutError) as err:
+                last_err = err
+                _LOGGER.debug("VNC 候选 %s:%s 不可达：%s", host, port, err)
+        if reader is None or writer is None:
+            _LOGGER.warning("连不上虚拟机 %s 的 VNC（试过 %s）：%s", vm.name, candidates, last_err)
+            return web.Response(status=502, text=f"无法连接 VNC 服务：{last_err}")
 
         response = web.WebSocketResponse(protocols=("binary",), max_msg_size=0, heartbeat=None)
         await response.prepare(request)
