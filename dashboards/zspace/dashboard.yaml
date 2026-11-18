@@ -365,10 +365,17 @@ views:
         state_color: true
         title: 运行状态
       filter:
+        # VM 运行态实体的 friendly_name 只有「运行中」（机器名当设备名），
+        # 不含「虚拟机」三字，不能用 name 匹配。改用 VM 独有属性 vm_name +
+        # entity_id 通配双保险，短 ID / 拼音 ID 两种命名都能匹配到。
         include:
         - domain: binary_sensor
           integration: zspace_nas
-          name: '*虚拟机*运行*'
+          attributes:
+            vm_name: '*'
+        - domain: binary_sensor
+          integration: zspace_nas
+          entity_id: 'binary_sensor.zspace_vm_*_running'
       sort:
         method: name
         ignore_case: true
