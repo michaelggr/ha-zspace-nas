@@ -28,7 +28,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_call_later, async_track_time_interval
 
-from .aggregate import VNC_RENEW_SIGNAL, build_view, classify_device
+from .aggregate import VNC_RENEW_SIGNAL, build_view, classify_device, display_vm_name
 from .const import DOMAIN
 from .coordinator import ZspaceBaseCoordinator
 from .entity import entry_identifier
@@ -272,10 +272,14 @@ class ZspaceAllEntitiesSensor(ForcedEntityIdMixin, SensorEntity):
             for vm in vm_data.vms:
                 ident = f"{runtime.identifier}_vm_{vm.name}"
                 devs = by_device.get(ident, {})
+                # 真机 VM 列表常缺 title/stateLang：标题会变成 zspace_xxx 机器名，
+                # 状态文案也会空。这里只做展示层兜底，raw name/state 原值保留给自动化。
+                shown_title = vm.title or display_vm_name(vm.name)
+                shown_state = vm.raw_state or ("运行中" if vm.running else "已关闭")
                 vms.append({
                     "name": vm.name,
-                    "title": vm.title or vm.name,
-                    "state": vm.raw_state,
+                    "title": shown_title,
+                    "state": shown_state,
                     "running": vm.running,
                     "cpu": vm.cpu_percent,
                     "memory": vm.memory_percent,

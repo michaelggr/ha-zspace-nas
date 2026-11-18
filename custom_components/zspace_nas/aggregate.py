@@ -240,3 +240,17 @@ def classify_device(identifier: str, nas_identifier: str) -> tuple[str, str]:
     if suffix.startswith("vm_"):
         return "vm", suffix[3:]
     return "container", suffix
+
+
+def display_vm_name(name: str) -> str:
+    """真机 VM 无 title 时的展示名兜底：去掉 zspace_ 前缀的随机机器名。
+
+    极空间列表接口给的是 ``zspace_dgoxt5d60y5n8y3t`` 这类内部名，直接显示在
+    卡片上像乱码。去掉固定前缀后至少短些；识别不出就保留原名（不丢信息）。
+    想要 HomeAssistant/win10 这种自定义名，需在极空间里给 VM 设置备注/标题。
+    """
+    text = str(name or "").strip()
+    if text.lower().startswith("zspace_"):
+        short = text[len("zspace_"):]
+        return short[:12] if short else text
+    return text

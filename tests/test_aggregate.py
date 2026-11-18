@@ -110,5 +110,17 @@ class ClassifyDeviceTest(unittest.TestCase):
                 self.assertEqual(aggregate.classify_device(identifier, nas), expected)
 
 
+class VmDisplayNameTest(unittest.TestCase):
+    def test_display_name(self) -> None:
+        cases = {
+            "zspace_dgoxt5d60y5n8y3t": "dgoxt5d60y5n",  # 去掉前缀并截断
+            "win10": "win10",          # 已是正常名，原样
+            "": "",                    # 空值不崩
+        }
+        for raw, expected in cases.items():
+            with self.subTest(raw=raw):
+                self.assertEqual(aggregate.display_vm_name(raw), expected)
+
+
 if __name__ == "__main__":
     unittest.main()
