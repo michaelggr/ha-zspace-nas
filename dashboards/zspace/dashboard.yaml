@@ -12,7 +12,7 @@ views:
       heading: 系统
       icon: mdi:chip
     - type: custom:mushroom-entity-card
-      entity: sensor.ji_kong_jian_z4pro_cpu_shi_yong_lu
+      entity: sensor.zspace_cpu_usage
       name: CPU 使用率
       icon: mdi:cpu-64-bit
       icon_color: blue
@@ -20,7 +20,7 @@ views:
       grid_options:
         columns: 6
     - type: custom:mushroom-entity-card
-      entity: sensor.ji_kong_jian_z4pro_nei_cun_shi_yong_lu
+      entity: sensor.zspace_memory_usage
       name: 内存使用率
       icon: mdi:memory
       icon_color: teal
@@ -28,7 +28,7 @@ views:
       grid_options:
         columns: 6
     - type: custom:mushroom-entity-card
-      entity: sensor.ji_kong_jian_z4pro_cpu_wen_du
+      entity: sensor.zspace_cpu_temperature
       name: CPU 温度
       icon: mdi:thermometer
       icon_color: orange
@@ -36,7 +36,7 @@ views:
       grid_options:
         columns: 6
     - type: custom:mushroom-entity-card
-      entity: sensor.ji_kong_jian_z4pro_feng_shan_zhuan_su
+      entity: sensor.zspace_fan_speed
       name: 风扇转速
       icon: mdi:fan
       icon_color: purple
@@ -53,13 +53,13 @@ views:
       icon: mdi:harddisk
     - type: custom:bar-card
       entities:
-      - entity: sensor.ji_kong_jian_z4pro_cun_chu_chi_sata11_shi_yong_lu
+      - entity: sensor.zspace_pool_sata11_usage
         name: sata11
         icon: mdi:harddisk
-      - entity: sensor.ji_kong_jian_z4pro_cun_chu_chi_nvme12_shi_yong_lu
+      - entity: sensor.zspace_pool_nvme12_usage
         name: nvme12
         icon: mdi:harddisk
-      - entity: sensor.ji_kong_jian_z4pro_cun_chu_chi_sata13_shi_yong_lu
+      - entity: sensor.zspace_pool_sata13_usage
         name: sata13
         icon: mdi:harddisk
       max: 100
@@ -86,7 +86,7 @@ views:
       grid_options:
         columns: 12
     - type: markdown
-      content: "{% set pools = [\n  ('sata11', 'sensor.ji_kong_jian_z4pro_cun_chu_chi_sata11_shi_yong_lu'),\n  ('nvme12', 'sensor.ji_kong_jian_z4pro_cun_chu_chi_nvme12_shi_yong_lu'),\n  ('sata13', 'sensor.ji_kong_jian_z4pro_cun_chu_chi_sata13_shi_yong_lu'),\n] -%}\n{% set rows = namespace(items=[]) -%}\n{% for name, eid in pools -%}\n{% for d in state_attr(eid, 'disks') or [] -%}\n{% set size = ((d.total\
+      content: "{% set pools = [\n  ('sata11', 'sensor.zspace_pool_sata11_usage'),\n  ('nvme12', 'sensor.zspace_pool_nvme12_usage'),\n  ('sata13', 'sensor.zspace_pool_sata13_usage'),\n] -%}\n{% set rows = namespace(items=[]) -%}\n{% for name, eid in pools -%}\n{% for d in state_attr(eid, 'disks') or [] -%}\n{% set size = ((d.total\
         \ / 1099511627776) | round(2)) if d.total else '—' -%}\n{% set temp = ((d.temperature | round(0) | int) ~ '℃') if d.temperature is not none else '—' -%}\n{% set health = '✅' if d.health in ['ok', 'good', 'normal', none] else ('⚠️ ' ~ d.health) -%}\n{% set _ = rows.items.append('| ' ~ name ~ ' | ' ~ (d.pos or '—') ~ ' | ' ~ (d.model or '—') ~ ' | ' ~ size ~ ' TB | ' ~ temp ~ ' | ' ~ (d.power_on_hours\
         \ or '—') ~ ' h | ' ~ health ~ ' |') -%}\n{% endfor -%}\n{% endfor -%}\n| 池 | 槽位 | 型号 | 容量 | 温度 | 通电 | 健康 |\n|:--|:--:|:--|--:|--:|--:|:--:|\n{{ rows.items | join('\\n') }}"
       grid_options:
@@ -105,7 +105,7 @@ views:
         show_states: true
         colorize_states: true
       series:
-      - entity: sensor.ji_kong_jian_z4pro_wang_luo_jie_shou
+      - entity: sensor.zspace_network_rx
         name: 下行
         type: area
         curve: smooth
@@ -113,7 +113,7 @@ views:
         transform: return Number(x) / 1048576;
         unit: MB/s
         color: '#42a5f5'
-      - entity: sensor.ji_kong_jian_z4pro_wang_luo_fa_song
+      - entity: sensor.zspace_network_tx
         name: 上行
         type: area
         curve: smooth
@@ -140,13 +140,13 @@ views:
       icon: mdi:download
     - type: entities
       entities:
-      - entity: sensor.ji_kong_jian_z4pro_xia_zai_ren_wu
+      - entity: sensor.zspace_downloads_active
         name: 进行中
         icon: mdi:progress-download
-      - entity: sensor.ji_kong_jian_z4pro_zuo_chong_ren_wu
+      - entity: sensor.zspace_downloads_seeding
         name: 做种
         icon: mdi:seed
-      - entity: sensor.ji_kong_jian_z4pro_xia_zai_su_du
+      - entity: sensor.zspace_downloads_rate
         name: 下载速度
         icon: mdi:speedometer
       grid_options:
@@ -227,13 +227,13 @@ views:
         show_states: true
         colorize_states: true
       series:
-      - entity: sensor.ji_kong_jian_z4pro_cpu_shi_yong_lu
+      - entity: sensor.zspace_cpu_usage
         name: CPU
         type: line
         curve: smooth
         stroke_width: 2
         color: '#42a5f5'
-      - entity: sensor.ji_kong_jian_z4pro_nei_cun_shi_yong_lu
+      - entity: sensor.zspace_memory_usage
         name: 内存
         type: line
         curve: smooth
@@ -259,19 +259,19 @@ views:
         show_states: true
         colorize_states: true
       series:
-      - entity: sensor.ji_kong_jian_z4pro_cun_chu_chi_sata11_shi_yong_lu
+      - entity: sensor.zspace_pool_sata11_usage
         name: sata11
         type: line
         curve: smooth
         stroke_width: 2
         color: '#42a5f5'
-      - entity: sensor.ji_kong_jian_z4pro_cun_chu_chi_nvme12_shi_yong_lu
+      - entity: sensor.zspace_pool_nvme12_usage
         name: nvme12
         type: line
         curve: smooth
         stroke_width: 2
         color: '#26a69a'
-      - entity: sensor.ji_kong_jian_z4pro_cun_chu_chi_sata13_shi_yong_lu
+      - entity: sensor.zspace_pool_sata13_usage
         name: sata13
         type: line
         curve: smooth
@@ -292,44 +292,27 @@ views:
           strokeDashArray: 3
   - type: grid
     cards:
-    - type: custom:apexcharts-card
-      graph_span: 24h
-      header:
-        title: 磁盘温度
-        show: true
-        show_states: true
-        colorize_states: true
-      series:
-      - entity: sensor.ji_kong_jian_z4pro_ci_pan_sda_wen_du
-        name: sda
-        type: line
-        curve: smooth
-        stroke_width: 2
-        color: '#42a5f5'
-      - entity: sensor.ji_kong_jian_z4pro_ci_pan_sdb_wen_du
-        name: sdb
-        type: line
-        curve: smooth
-        stroke_width: 2
-        color: '#ffb74d'
-      - entity: sensor.ji_kong_jian_z4pro_ci_pan_sdc_wen_du
-        name: sdc
-        type: line
-        curve: smooth
-        stroke_width: 2
-        color: '#26a69a'
-      yaxis:
-      - min: 20
-        max: 45
-        apex_config:
-          tickAmount: 4
-      apex_config:
-        chart:
-          height: 230
-        legend:
-          show: false
-        grid:
-          strokeDashArray: 3
+    - type: custom:auto-entities
+      card:
+        type: entities
+        state_color: true
+        title: 磁盘温度（当前）
+      filter:
+        include:
+        - domain: sensor
+          integration: zspace_nas
+          name: '*磁盘*温度*'
+      sort:
+        method: name
+        ignore_case: true
+      grid_options:
+        columns: 12
+    - type: markdown
+      content: >-
+        温度曲线请在「开发者工具 → 状态」里搜 `disk` 找到对应实体的「查看历史记录」。
+        短英文 ID 下磁盘实体用硬盘序列号命名，无法在面板里写死。
+      grid_options:
+        columns: 12
     - type: custom:apexcharts-card
       graph_span: 24h
       header:
@@ -338,7 +321,7 @@ views:
         show_states: true
         colorize_states: true
       series:
-      - entity: sensor.ji_kong_jian_z4pro_wang_luo_jie_shou
+      - entity: sensor.zspace_network_rx
         name: 下行
         type: area
         curve: smooth
@@ -346,7 +329,7 @@ views:
         transform: return Number(x) / 1048576;
         unit: MB/s
         color: '#42a5f5'
-      - entity: sensor.ji_kong_jian_z4pro_wang_luo_fa_song
+      - entity: sensor.zspace_network_tx
         name: 上行
         type: area
         curve: smooth

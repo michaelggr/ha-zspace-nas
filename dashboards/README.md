@@ -54,13 +54,37 @@
 - **markdown 卡里的内联 `style` 会被前端剥掉**（只保留结构标签）：`<table>`、`<div>`、`<details>`、`<ha-icon>` 能用，但边框、圆角、颜色写不进去。所以盘位没有做成「前面板」那种带描边的格子，改用原生表格——想上真·盘位格需要装 `card_mod` 自己注入样式。
 - 表格必须紧跟表头分隔行，中间不能有空行，否则整张表退化成纯文本。多行数据先在 Jinja 里 `append` 到列表再 `join('\n')`，比在模板里直接换行可靠。
 
-## 关于实体 ID
+## 关于实体 ID（当前面板为「短英文 ID」版）
 
-面板里写死了 entity_id（`sensor.ji_kong_jian_z4pro_…` 这种拼音）。如果你在集成选项里打开了
-「短英文实体 ID」，这些引用会失效——卡片的数值会变成 `—` 或空图。
+本面板写死的 12 个 entity_id 用的是短英文形式（`sensor.zspace_cpu_usage` 这种），
+**对应集成选项里「短英文实体 ID」已开启的状态**。
 
-换成短 ID 后需要把 `dashboard.yaml` 里的 ID 一并替换（概览页 21 处、趋势页 12 处）。
-容器页和「全部实体」页用 `auto-entities` 按集成过滤，不受影响。
+这个选项的迁移是**不可逆**的：一旦实体从拼音 ID 迁成短 ID，关掉选项也不会变回拼音。
+所以面板只能跟着短 ID 走——如果你用的是旧版拼音 ID，这些卡片会显示「未找到实体」。
+
+对应关系（拼音 → 短 ID）：
+
+| 拼音 ID（旧） | 短 ID（当前） |
+| --- | --- |
+| `…_cpu_shi_yong_lu` | `sensor.zspace_cpu_usage` |
+| `…_nei_cun_shi_yong_lu` | `sensor.zspace_memory_usage` |
+| `…_cpu_wen_du` | `sensor.zspace_cpu_temperature` |
+| `…_feng_shan_zhuan_su` | `sensor.zspace_fan_speed` |
+| `…_cun_chu_chi_sata11_shi_yong_lu` | `sensor.zspace_pool_sata11_usage` |
+| `…_cun_chu_chi_nvme12_shi_yong_lu` | `sensor.zspace_pool_nvme12_usage` |
+| `…_cun_chu_chi_sata13_shi_yong_lu` | `sensor.zspace_pool_sata13_usage` |
+| `…_wang_luo_jie_shou` | `sensor.zspace_network_rx` |
+| `…_wang_luo_fa_song` | `sensor.zspace_network_tx` |
+| `…_xia_zai_ren_wu` | `sensor.zspace_downloads_active` |
+| `…_zuo_chong_ren_wu` | `sensor.zspace_downloads_seeding` |
+| `…_xia_zai_su_du` | `sensor.zspace_downloads_rate` |
+
+以下部分**不依赖写死 ID**，任何命名方式都能用：
+
+- 容器页、全部实体页：`auto-entities` 按 `integration: zspace_nas` 过滤；
+- 概览页的容器/磁盘摘要：Jinja 里 `integration_entities('zspace_nas')` 按集成取；
+- 磁盘温度：改为 `auto-entities` 按名称 `*磁盘*温度*` 匹配（短 ID 下磁盘用序列号命名，
+  如 `sensor.zspace_disk_zw61gzgt_temperature`，无法写死）。要看温度曲线请在实体详情页点历史。
 
 ## 虚拟机与 noVNC 控制台（v0.9.0+）
 

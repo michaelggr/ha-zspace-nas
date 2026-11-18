@@ -25,8 +25,10 @@ from typing import Any
 from aiohttp import WSMsgType, web
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.http import KEY_HASS, HomeAssistantView
 
+from .aggregate import VNC_RENEW_SIGNAL
 from .const import DOMAIN
 from .vnc_token import TOKEN_TTL_HOURS, make_token, parse_token
 
@@ -256,6 +258,8 @@ def async_update_device_urls(hass: HomeAssistant, entry_id: str, runtime: Any) -
         url = console_url(hass, runtime, vm_name)
         if url and device.configuration_url != url:
             devices.async_update_device(device.id, configuration_url=url)
+            # 通知聚合实体重取 console_url（签名链接已换新）
+            async_dispatcher_send(hass, VNC_RENEW_SIGNAL, entry_id)
 
 
 async def async_register(hass: HomeAssistant) -> None:

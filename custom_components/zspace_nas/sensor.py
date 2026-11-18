@@ -18,6 +18,7 @@ from homeassistant.const import PERCENTAGE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from .all_entities_sensor import ZspaceAllEntitiesSensor
 from .const import DOMAIN
 from .coordinator import StorageData, ZspaceBaseCoordinator
 from .entity import ZspaceEntity
@@ -140,7 +141,7 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     runtime: ZspaceRuntime = hass.data[DOMAIN][entry.entry_id]
-    entities: list[ZspaceSensor] = [
+    entities: list = [
         ZspaceSensor(
             runtime,
             runtime.system,
@@ -411,6 +412,9 @@ async def async_setup_entry(
                     ),
                 ]
             )
+
+    # 聚合实体：懒加载 payload，首次被读取时其它实体已在注册表里
+    entities.append(ZspaceAllEntitiesSensor(hass, entry, runtime))
 
     entities.extend(
         [

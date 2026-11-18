@@ -61,6 +61,7 @@ from .entity import (
     entry_identifier,
 )
 from .runtime import ZspaceRuntime
+from .panel import async_remove_panel_if_last, async_setup_panel
 from .safety import SafetyGuard, build_policy
 from .services import async_setup_services
 from .vnc import async_register as async_register_vnc
@@ -186,6 +187,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await async_setup_services(hass)
+    # 侧边栏面板：JS 由集成自托管，注册后用户无需手动加卡片/拷资源。
+    await async_setup_panel(hass)
 
     if vnc_enabled:
         # 静态目录 + 两个视图全局只注册一次，设备链接在实体建好后写进去
@@ -208,6 +211,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
+        # 最后一个实例卸载时移除侧边栏面板，避免留下打不开的入口。
+        await async_remove_panel_if_last(hass)
     return unload_ok
 
 

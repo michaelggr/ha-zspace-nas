@@ -11,3 +11,7 @@ venv/
 *.log
 
 dist/
+
+# 本地预览生成物（截图 shot_*.png / preview.png 保留作效果存档）
+tests/fixtures/preview_*.html
+tests/fixtures/panel_preview.html
