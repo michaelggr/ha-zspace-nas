@@ -20,17 +20,24 @@ from .zspace.normalize import (
     DiskInfo,
     DockerData,
     DownloadData,
+    EventData,
+    GpuData,
     StorageData,
     SystemData,
+    TimeMachineData,
     VmData,
     VmInfo,
     normalize_containers,
     normalize_disks,
     normalize_downloads,
     normalize_engine,
+    normalize_events,
+    normalize_gpu_info,
+    normalize_gpu_tasks,
     normalize_smart,
     normalize_storage,
     normalize_system,
+    normalize_time_machine,
     normalize_vms,
     vm_items,
 )
@@ -43,6 +50,10 @@ __all__ = [
     "DiskData",
     "DiskInfo",
     "DockerCoordinator",
+    "EventCoordinator",
+    "EventData",
+    "GpuCoordinator",
+    "GpuData",
     "DockerData",
     "DownloadData",
     "StorageCoordinator",
@@ -50,6 +61,8 @@ __all__ = [
     "SystemCoordinator",
     "SystemData",
     "TaskCoordinator",
+    "TimeMachineCoordinator",
+    "TimeMachineData",
     "VmCoordinator",
     "VmData",
     "VmInfo",
@@ -194,3 +207,50 @@ class VmCoordinator(ZspaceBaseCoordinator):
                 detail = detail[0]
             merged.append({**item, **(detail if isinstance(detail, dict) else {})})
         return normalize_vms(merged)
+
+
+class GpuCoordinator(ZspaceBaseCoordinator):
+    """外接 GPU + AI 任务，5 分钟一次。
+
+    真机验收里该接口在部分机型返回 E_API（接口不可用）。这里把两个子接口的
+    失败吞掉并标记不可用，而不是让整个协调器进入 UpdateFailed——否则不支持
+    GPU 的机型会多出一堆「不可用」实体，反而干扰正常监控。
+    """
+
+    async def _fetch(self) -> GpuData:
+        data = GpuData()
+        try:
+            raw = await self.client.async_call("ops", "gpu", {"action": "info"})
+            data.gpus = normalize_gpu_info(raw)
+        except ZspaceError as err:
+            _LOGGER.debug("GPU 信息不可用（机型可能不支持）：%s", err)
+            data.info_available = False
+        try:
+            raw = await self.client.async_call("ops", "gpu", {"action": "tasks"})
+            data.tasks = normalize_gpu_tasks(raw)
+        except ZspaceError as err:
+            _LOGGER.debug("AI 任务不可用：%s", err)
+            data.tasks_available = False
+        return data
+
+
+class TimeMachineCoordinator(ZspaceBaseCoordinator):
+    """Time Machine 备份状态，15 分钟一次（变化很慢）。"""
+
+    async def _fetch(self) -> TimeMachineData:
+        raw = await self.client.async_call("backup", "time-machine", {"action": "status"})
+        return normalize_time_machine(raw)
+
+
+class EventCoordinator(ZspaceBaseCoordinator):
+    """系统事件/登录日志，3 分钟一次。
+
+    只读 `list`。播报用的「新事件」判断由 announce.py 按 id 去重，协调器只
+    负责拿最新一页（40 条），不在数据层做状态记忆。
+    """
+
+    async def _fetch(self) -> EventData:
+        raw = await self.client.async_call(
+            "system", "events", {"action": "list", "num": 40}
+        )
+        return normalize_events(raw)

@@ -20,6 +20,8 @@
     restart: 'mdi:restart', console: 'mdi:console', check: 'mdi:check-circle',
     alert: 'mdi:alert-circle', close: 'mdi:close', full: 'mdi:fullscreen',
     chevron: 'mdi:chevron-down', power: 'mdi:power', refresh: 'mdi:refresh',
+    gpu: 'mdi:expansion-card', ai: 'mdi:brain', backup: 'mdi:backup-restore',
+    bell: 'mdi:bell-outline', speaker: 'mdi:speaker',
   };
 
   const TABS = [
@@ -27,6 +29,7 @@
     { id: 'containers', label: '容器', icon: ICON.docker },
     { id: 'vms', label: '虚拟机', icon: ICON.vm },
     { id: 'storage', label: '存储', icon: ICON.disk },
+    { id: 'ops', label: '运维', icon: ICON.gpu },
   ];
 
   const THEMES = {
@@ -124,6 +127,9 @@
           const keys = Object.keys(THEMES);
           this._theme = keys[(keys.indexOf(this._theme) + 1) % keys.length];
           this._render();
+        } else if (act === 'announce') {
+          e.stopPropagation();
+          this._testAnnounce(btn);
         } else if (act === 'expand') {
           this._expanded = !this._expanded; this._render();
         } else if (act === 'filter') {
@@ -153,6 +159,22 @@
           this._renderList();
         }
       });
+    }
+
+    async _testAnnounce(btn) {
+      if (!this._hass) return;
+      const original = btn.innerHTML;
+      btn.classList.add('busy'); btn.innerHTML = '…';
+      try {
+        await this._hass.callService('zspace_nas', 'announce_test', {
+          message: '极空间播报测试：音箱连接正常',
+        });
+        btn.title = '已发送播报测试';
+      } catch (err) {
+        btn.title = '播报失败：' + String(err) + '（请先在集成选项里配置媒体播放器与 TTS）';
+      } finally {
+        btn.classList.remove('busy'); btn.innerHTML = original;
+      }
     }
 
     async _callService(ds, btn) {
@@ -263,6 +285,7 @@
         </div>
         <div class="top-right">
           ${health}
+          <button class="ico-btn" data-act="announce" title="播报测试（需先在集成选项配置音箱）">${this._icon(ICON.speaker)}</button>
           <button class="ico-btn" data-act="theme" title="切换主题">${this._icon('mdi:palette')}</button>
         </div>
       </div>`;
@@ -306,8 +329,82 @@
         case 'containers': return this._containers(view.containers || []);
         case 'vms': return this._vms(view.vms || []);
         case 'storage': return this._storage(view.storage || {});
+        case 'ops': return this._ops(view);
         default: return this._overview(view);
       }
+    }
+
+    // 运维页：外接 GPU / 本地 AI 任务 + Time Machine 备份 + 系统事件
+    _ops(view) {
+      const gpu = view.gpu || {};
+      const tm = view.time_machine || {};
+      const events = view.events || [];
+      const newCount = events.filter((e) => e.is_new).length;
+      return `<div class="section">
+        <div class="sec-title">${this._icon(ICON.gpu)} 外接 GPU 与 AI 任务</div>
+        ${this._gpuBlock(gpu)}
+        <div class="sec-title" style="margin-top:16px">${this._icon(ICON.backup)} Time Machine 备份</div>
+        ${this._tmBlock(tm)}
+        <div class="sec-title" style="margin-top:16px">${this._icon(ICON.bell)} 系统事件
+          ${newCount ? `<span class="badge bad" style="margin-left:auto">${newCount} 条未读</span>` : ''}</div>
+        ${this._eventBlock(events)}
+      </div>`;
+    }
+
+    _gpuBlock(gpu) {
+      const gpus = gpu.gpus || [];
+      const tasks = gpu.tasks || [];
+      if (gpu.available === false && !gpus.length && !tasks.length) {
+        return '<div class="none">当前机型未提供外接 GPU / AI 接口（或接口不可用）</div>';
+      }
+      const gpuRows = gpus.map((g) => {
+        const memPct = Math.max(0, Math.min(100, Number(g.memory_percent) || 0));
+        return `<div class="gpu-card">
+          <div class="gpu-head"><b>${this._icon(ICON.gpu)} ${esc(g.model || g.name || 'GPU')}</b>
+            <span>${fmtNum(g.utilization, 0)}% 负载</span></div>
+          <div class="bar"><i style="width:${memPct}%;background:${memPct > 85 ? '#ef5350' : 'var(--accent)'}"></i></div>
+          <div class="pool-meta"><span>显存 ${fmtNum(g.memory_used_mib, 0)} / ${fmtNum(g.memory_total_mib, 0)} MiB</span>
+            <span>${fmtNum(g.temperature, 0)}°C</span><span>${esc(g.driver || '')}</span></div>
+        </div>`;
+      }).join('');
+      const taskRows = tasks.map((t) => `<div class="disk-row">
+          <span class="model">${this._icon(ICON.ai)} ${esc(t.name)}</span>
+          <span class="slot">${esc(t.process_name || '')}</span>
+          <span class="temp">${esc(t.status || '运行中')}</span>
+          <span class="life">${t.memory_mib ? fmtNum(t.memory_mib, 0) + ' MiB' : ''}</span>
+        </div>`).join('');
+      return `${gpuRows || '<div class="none">未检测到外接 GPU</div>'}
+        ${tasks.length ? `<div class="sub-title">本地 AI 任务</div>${taskRows}` : ''}`;
+    }
+
+    _tmBlock(tm) {
+      if (!tm || !tm.status && tm.enabled === null && !tm.path) {
+        return '<div class="none">当前账号未配置 Time Machine</div>';
+      }
+      const u = Math.max(0, Math.min(100, Number(tm.usage) || 0));
+      const state = tm.have_backup ? '已有备份' : (tm.enabled ? '已启用' : '未启用');
+      return `<div class="gpu-card">
+        <div class="gpu-head"><b>${this._icon(ICON.backup)} ${esc(state)}</b>
+          <span>${tm.usage != null ? fmtNum(u, 1) + '%' : '无限制'}</span></div>
+        <div class="bar"><i style="width:${u}%;background:var(--accent2)"></i></div>
+        <div class="pool-meta"><span>已用 ${tm.used_gib != null ? fmtNum(tm.used_gib, 1) + ' GiB' : '—'}</span>
+          <span>配额 ${tm.limit_gib != null ? fmtNum(tm.limit_gib, 1) + ' GiB' : '无限制'}</span>
+          <span>${esc(tm.path || '')}</span></div>
+      </div>`;
+    }
+
+    _eventBlock(events) {
+      if (!events.length) return '<div class="none">暂无系统事件</div>';
+      return `<div class="events">${events.map((e) => {
+        const rank = ['info', 'warning', 'error'].includes(e.level) ? e.level : '';
+        const color = e.level === 'error' ? 'bad' : (rank === 'warning' ? 'warn' : 'ok');
+        return `<div class="event-row ${e.is_new ? 'is-new' : ''}">
+          <span class="ev-dot ${color}"></span>
+          <div class="ev-body"><b>${esc(e.title || e.type || '系统事件')}</b>
+            <span>${esc(e.content || '')}</span></div>
+          <div class="ev-meta"><span>${esc(e.level || '')}</span><span>${esc(e.time || '')}</span></div>
+        </div>`;
+      }).join('')}</div>`;
     }
 
     _overview(view) {
@@ -523,6 +620,23 @@
     .chip { padding:9px 12px; border-radius:10px; background:rgba(255,255,255,.05); display:flex; flex-direction:column; gap:3px; }
     .chip span { font-size:10.5px; opacity:.6; }
     .chip b { font-size:14px; }
+    .gpu-card { padding:12px 14px; border-radius:12px; background:rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.08); margin-bottom:10px; }
+    .gpu-head { display:flex; justify-content:space-between; align-items:center; font-size:13px; margin-bottom:8px; }
+    .gpu-head b { display:inline-flex; align-items:center; gap:5px; font-weight:600; }
+    .gpu-head b ha-icon { --mdc-icon-size:15px; color:var(--accent); }
+    .gpu-head span { font-size:11.5px; opacity:.75; }
+    .sub-title { font-size:11px; opacity:.6; margin:12px 0 6px; font-weight:600; }
+    .events { display:flex; flex-direction:column; gap:6px; }
+    .event-row { display:flex; align-items:center; gap:10px; padding:9px 11px; border-radius:10px;
+      background:rgba(255,255,255,.045); border:1px solid rgba(255,255,255,.07); }
+    .event-row.is-new { border-left:3px solid var(--accent); background:rgba(124,140,255,.08); }
+    .ev-dot { width:8px; height:8px; border-radius:50%; flex:none; }
+    .ev-dot.ok { background:#5ee0c8; } .ev-dot.warn { background:#ffb74d; } .ev-dot.bad { background:#ff6b6b; }
+    .ev-body { display:flex; flex-direction:column; min-width:0; flex:1; }
+    .ev-body b { font-size:12.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .ev-body span { font-size:10.5px; opacity:.6; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .ev-meta { display:flex; flex-direction:column; align-items:flex-end; gap:2px; font-size:10px; opacity:.6; flex:none; }
     .list-tools { display:flex; gap:8px; align-items:center; margin-bottom:12px; }
     .search { flex:1; display:flex; align-items:center; gap:6px; padding:6px 10px; border-radius:9px;
       background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.10); }

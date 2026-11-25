@@ -69,5 +69,21 @@ async def async_get_config_entry_diagnostics(
                 "ok": runtime.tasks.last_update_success,
                 "data": _redact(runtime.tasks.data),
             },
+            "vm": {
+                "ok": runtime.vm.last_update_success,
+                "data": _redact(runtime.vm.data),
+            },
+            "gpu": {
+                "ok": runtime.gpu.last_update_success,
+                "data": _redact(runtime.gpu.data),
+            },
+            "time_machine": {
+                "ok": runtime.tm.last_update_success,
+                "data": _redact(runtime.tm.data),
+            },
+            "events": {
+                "ok": runtime.events.last_update_success,
+                "data": _redact(runtime.events.data),
+            },
         },
     }

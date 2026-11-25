@@ -16,6 +16,7 @@ SERVICES = ROOT / "custom_components/zspace_nas/services.py"
 sys.path.insert(0, str(ROOT / "custom_components/zspace_nas"))
 
 from const import (  # noqa: E402
+    SERVICE_ANNOUNCE_TEST,
     SERVICE_CONTAINER_ACTION,
     SERVICE_CONTAINER_LOGS,
     SERVICE_DUMP_RAW,
@@ -23,6 +24,7 @@ from const import (  # noqa: E402
 )
 
 EXPECTED_SERVICES = {
+    SERVICE_ANNOUNCE_TEST,
     SERVICE_CONTAINER_ACTION,
     SERVICE_CONTAINER_LOGS,
     SERVICE_DUMP_RAW,
@@ -66,6 +68,7 @@ class ServiceRegistrationTest(unittest.TestCase):
     def test_all_expected_services_registered(self) -> None:
         # 源码里用常量名（AST 中是 Name），解析回它们指向的字符串值再比对
         name_to_value = {
+            "SERVICE_ANNOUNCE_TEST": SERVICE_ANNOUNCE_TEST,
             "SERVICE_CONTAINER_ACTION": SERVICE_CONTAINER_ACTION,
             "SERVICE_CONTAINER_LOGS": SERVICE_CONTAINER_LOGS,
             "SERVICE_DUMP_RAW": SERVICE_DUMP_RAW,

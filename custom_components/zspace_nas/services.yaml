@@ -102,3 +102,27 @@ vnc_url:
       required: false
       selector:
         text:
+
+announce_test:
+  name: 播报测试
+  description: 通过音箱播报一段测试语音，用于验证媒体播放器与 TTS 配置是否正确。系统事件的新告警会用同样的通道自动播报。
+  fields:
+    message:
+      name: 播报内容
+      required: false
+      default: 极空间播报测试：音箱连接正常
+      selector:
+        text:
+    media_player:
+      name: 媒体播放器
+      description: 留空则使用集成选项里配置的播放器。
+      required: false
+      selector:
+        entity:
+          domain: media_player
+    entry_id:
+      name: 设备标识
+      description: 多台极空间时可指定。
+      required: false
+      selector:
+        text:

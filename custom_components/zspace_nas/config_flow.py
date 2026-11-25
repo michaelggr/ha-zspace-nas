@@ -17,34 +17,45 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
 
 from .const import (
+    ANNOUNCE_LEVELS,
     CONF_ALLOW_CONTROL,
     CONF_ALLOWED,
     CONF_ALLOW_INSECURE,
+    CONF_ANNOUNCE,
+    CONF_ANNOUNCE_LEVEL,
+    CONF_ANNOUNCE_MEDIA,
     CONF_BINARY,
     CONF_COOLDOWN,
     CONF_DISK_INTERVAL,
     CONF_DOCKER_INTERVAL,
     CONF_DOWNLOAD_INTERVAL,
     CONF_DRY_RUN,
+    CONF_EVENT_INTERVAL,
+    CONF_GPU_INTERVAL,
     CONF_HOST,
     CONF_PROFILE,
     CONF_PROFILE_HOME,
     CONF_PROTECTED,
     CONF_SHORT_IDS,
     CONF_STORAGE_INTERVAL,
+    CONF_TM_INTERVAL,
     CONF_VM_INTERVAL,
     CONF_VNC_CONSOLE,
     CONF_VNC_HOST,
     CONF_SYSTEM_INTERVAL,
     CONF_WEB_URL,
+    DEFAULT_ANNOUNCE_LEVEL,
     DEFAULT_BINARY,
     DEFAULT_COOLDOWN,
     DEFAULT_DISK_INTERVAL,
     DEFAULT_DOCKER_INTERVAL,
     DEFAULT_DOWNLOAD_INTERVAL,
+    DEFAULT_EVENT_INTERVAL,
+    DEFAULT_GPU_INTERVAL,
     DEFAULT_PROFILE,
     DEFAULT_PROFILE_HOME,
     DEFAULT_STORAGE_INTERVAL,
+    DEFAULT_TM_INTERVAL,
     DEFAULT_VM_INTERVAL,
     DEFAULT_SYSTEM_INTERVAL,
     DOMAIN,
@@ -308,6 +319,46 @@ class ZspaceNasOptionsFlow(OptionsFlow):
                     default=options.get(CONF_DISK_INTERVAL, DEFAULT_DISK_INTERVAL),
                 ): selector.NumberSelector(
                     selector.NumberSelectorConfig(min=60, max=86400, step=60, unit_of_measurement="s")
+                ),
+                # ── GPU / AI、Time Machine、系统事件 ──
+                vol.Optional(
+                    CONF_GPU_INTERVAL,
+                    default=options.get(CONF_GPU_INTERVAL, DEFAULT_GPU_INTERVAL),
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=MIN_INTERVAL, max=MAX_INTERVAL, step=30, unit_of_measurement="s"
+                    )
+                ),
+                vol.Optional(
+                    CONF_TM_INTERVAL,
+                    default=options.get(CONF_TM_INTERVAL, DEFAULT_TM_INTERVAL),
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(min=60, max=86400, step=60, unit_of_measurement="s")
+                ),
+                vol.Optional(
+                    CONF_EVENT_INTERVAL,
+                    default=options.get(CONF_EVENT_INTERVAL, DEFAULT_EVENT_INTERVAL),
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=MIN_INTERVAL, max=MAX_INTERVAL, step=30, unit_of_measurement="s"
+                    )
+                ),
+                # ── 系统事件音箱播报 ──
+                vol.Optional(
+                    CONF_ANNOUNCE, default=options.get(CONF_ANNOUNCE, False)
+                ): selector.BooleanSelector(),
+                vol.Optional(
+                    CONF_ANNOUNCE_MEDIA, default=options.get(CONF_ANNOUNCE_MEDIA, "")
+                ): selector.EntitySelector(
+                    selector.EntitySelectorConfig(domain="media_player")
+                ),
+                vol.Optional(
+                    CONF_ANNOUNCE_LEVEL,
+                    default=options.get(CONF_ANNOUNCE_LEVEL, DEFAULT_ANNOUNCE_LEVEL),
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=list(ANNOUNCE_LEVELS), mode=selector.SelectSelectorMode.DROPDOWN
+                    )
                 ),
             }
         )

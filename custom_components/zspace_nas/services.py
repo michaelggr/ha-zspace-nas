@@ -22,6 +22,7 @@ from .const import (
     ATTR_DOMAIN,
     ATTR_PARAMS,
     DOMAIN,
+    SERVICE_ANNOUNCE_TEST,
     SERVICE_CONTAINER_ACTION,
     SERVICE_CONTAINER_LOGS,
     SERVICE_VNC_URL,
@@ -62,6 +63,14 @@ DUMP_SCHEMA = vol.Schema(
         vol.Required(ATTR_DOMAIN): cv.string,
         vol.Required(ATTR_CLI_ACTION): cv.string,
         vol.Optional(ATTR_PARAMS, default={}): dict,
+        vol.Optional("entry_id"): cv.string,
+    }
+)
+
+ANNOUNCE_SCHEMA = vol.Schema(
+    {
+        vol.Optional("message", default="极空间播报测试：音箱连接正常"): cv.string,
+        vol.Optional("media_player", default=""): cv.string,
         vol.Optional("entry_id"): cv.string,
     }
 )
@@ -279,6 +288,34 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         _handle_dump_raw,
         schema=DUMP_SCHEMA,
         supports_response=SupportsResponse.OPTIONAL,
+    )
+
+    async def _handle_announce_test(call: ServiceCall) -> None:
+        """播报测试：验证媒体播放器 + TTS 是否配置正确。"""
+        runtime = _first_runtime(hass, call.data.get("entry_id"))
+        media = (call.data.get("media_player") or "").strip()
+        if not media and runtime is not None:
+            announcer = getattr(runtime, "announcer", None)
+            media = getattr(announcer, "media_player", "") if announcer else ""
+        if not media:
+            from homeassistant.exceptions import ServiceValidationError as SVE
+
+            raise SVE("未配置媒体播放器，请先在集成选项里填「事件播报媒体播放器」")
+        await hass.services.async_call(
+            "tts",
+            "speak",
+            {
+                "media_player_entity_id": media,
+                "message": call.data["message"],
+            },
+            blocking=False,
+        )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_ANNOUNCE_TEST,
+        _handle_announce_test,
+        schema=ANNOUNCE_SCHEMA,
     )
 
 

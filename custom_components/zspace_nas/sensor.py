@@ -413,6 +413,29 @@ async def async_setup_entry(
                 ]
             )
 
+    # GPU / AI、Time Machine、系统事件概况
+    entities.extend(
+        [
+            ZspaceSensor(
+                runtime, runtime.gpu, "gpu_count", "外接 GPU 数量",
+                lambda d: len(d.gpus) if d else None, icon="mdi:expansion-card", precision=0,
+            ),
+            ZspaceSensor(
+                runtime, runtime.gpu, "ai_tasks", "AI 任务数",
+                lambda d: len(d.tasks) if d else None, icon="mdi:brain", precision=0,
+            ),
+            ZspaceSensor(
+                runtime, runtime.tm, "time_machine_usage", "Time Machine 用量",
+                lambda d: getattr(d, "usage", None), unit=PERCENTAGE,
+                icon="mdi:backup-restore", precision=1,
+            ),
+            ZspaceSensor(
+                runtime, runtime.events, "system_events", "系统事件数",
+                lambda d: len(d.events) if d else None, icon="mdi:bell-outline", precision=0,
+            ),
+        ]
+    )
+
     # 聚合实体：懒加载 payload，首次被读取时其它实体已在注册表里
     entities.append(ZspaceAllEntitiesSensor(hass, entry, runtime))
 

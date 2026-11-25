@@ -103,6 +103,11 @@ class ZspaceAllEntitiesSensor(ForcedEntityIdMixin, SensorEntity):
         self.async_on_remove(
             async_dispatcher_connect(self.hass, VNC_RENEW_SIGNAL, self._force_refresh)
         )
+        # GPU / Time Machine / 事件更新后重建 view（这些未必有独立实体）
+        for coord in (
+            self.runtime.gpu, self.runtime.tm, self.runtime.events,
+        ):
+            self.async_on_remove(coord.async_add_listener(self._force_refresh))
         self._payload = self._build_payload()
         self._sig = self._signature()
         self.async_on_remove(async_track_time_interval(self.hass, self._async_poll, timedelta(minutes=5)))
@@ -156,7 +161,32 @@ class ZspaceAllEntitiesSensor(ForcedEntityIdMixin, SensorEntity):
             state = states.get(eid)
             parts.append((eid, state.state if state else None,
                           state.last_changed if state else None))
+        # GPU / 事件这类数据未必有对应实体，直接把协调器数据纳入签名，
+        # 变化时也能触发 view 重建（事件列表不再需要等实体状态变化）。
+        parts.append(self._coordinator_signature())
         return tuple(parts)
+
+    def _coordinator_signature(self) -> str:
+        """GPU / Time Machine / 事件数据的轻量签名。"""
+        try:
+            runtime = self.runtime
+            gpu = runtime.gpu.data
+            tm = runtime.tm.data
+            events = runtime.events.data
+            return json.dumps(
+                {
+                    "gpu": [vars(g) for g in gpu.gpus] + [vars(t) for t in gpu.tasks]
+                    if gpu else None,
+                    "gpu_ok": [gpu.info_available, gpu.tasks_available] if gpu else None,
+                    "tm": vars(tm) if tm else None,
+                    "events": [vars(e) for e in events.events] if events else None,
+                },
+                ensure_ascii=False,
+                sort_keys=True,
+                default=str,
+            )
+        except Exception:  # pragma: no cover - 防御
+            return ""
 
     def _write_if_changed(self) -> None:
         sig = self._signature()
@@ -291,6 +321,36 @@ class ZspaceAllEntitiesSensor(ForcedEntityIdMixin, SensorEntity):
                     "reboot_button_id": next(iter(devs.get("button", [])), None),
                     "console_url": self._console_url(vm.name),
                 })
+        # GPU / AI 任务：接口不支持的机型给明确标记，前端显示「不支持」
+        gpu_view: dict[str, Any] = {"available": False, "gpus": [], "tasks": []}
+        gpu_data = runtime.gpu.data
+        if gpu_data:
+            gpu_view = {
+                "available": gpu_data.info_available or gpu_data.tasks_available,
+                "gpus": [vars(g) for g in gpu_data.gpus],
+                "tasks": [vars(t) for t in gpu_data.tasks],
+            }
+        # Time Machine 备份状态
+        tm_view: dict[str, Any] = {}
+        tm_data = runtime.tm.data
+        if tm_data:
+            tm_view = {
+                "status": tm_data.status,
+                "enabled": tm_data.enabled,
+                "limit_gib": round(tm_data.limit_bytes / 1024**3, 1)
+                if tm_data.limit_bytes else None,
+                "used_gib": round(tm_data.used_bytes / 1024**3, 1)
+                if tm_data.used_bytes else None,
+                "usage": tm_data.usage,
+                "path": tm_data.path,
+                "have_backup": tm_data.have_backup,
+            }
+        # 系统事件：前端只展示最近 20 条，播报器自己按 id 去重
+        event_views: list[dict[str, Any]] = []
+        event_data = runtime.events.data
+        if event_data:
+            event_views = [vars(e) for e in event_data.events[:20]]
+
         # 型号/版本从设备信息取（DeviceInfo 是 Mapping），比 runtime 属性可靠
         dev = runtime.device or {}
         model = dev.get("model") if hasattr(dev, "get") else None
@@ -298,6 +358,9 @@ class ZspaceAllEntitiesSensor(ForcedEntityIdMixin, SensorEntity):
             "pools": pools,
             "containers": containers,
             "vms": vms,
+            "gpu": gpu_view,
+            "time_machine": tm_view,
+            "events": event_views,
             "host_name": self.entry.title,
             "model": model,
             "version": None,  # 固件版本当前未进聚合视图，保留字段供卡片兼容

@@ -23,7 +23,8 @@ const GM={cpu:'▣',memory:'▤',thermometer:'◉',fan:'✳',network:'⌘',downl
  docker:'▦',monitor:'▢',harddisk:'▭',database:'◫',play:'▶',stop:'■',restart:'↻',
  console:'⌨',check:'✓',alert:'!',close:'✕',fullscreen:'⛶',chevron:'⌄',power:'⏻',
  refresh:'↻',nas:'▥',palette:'◐',magnify:'⌕','arrow-down':'↓','arrow-up':'↑',
- 'information-outline':'i','chevron-down':'⌄'};
+ 'information-outline':'i','chevron-down':'⌄',
+ 'expansion-card':'▤',brain:'◈','backup-restore':'↺','bell-outline':'♢',speaker:'▷'};
 class HaIcon extends HTMLElement{connectedCallback(){
  const n=(this.getAttribute('icon')||'').split(':')[1]||'';
  this.textContent=GM[n]||'•';this.style.cssText='display:inline-grid;place-items:center;font-style:normal';}}
@@ -63,6 +64,7 @@ def main() -> None:
         ("containers", "容器"),
         ("vms", "虚拟机"),
         ("storage", "存储"),
+        ("ops", "运维"),
     ):
         html = (
             TEMPLATE.replace("__ICONMAP__", ICON_MAP)

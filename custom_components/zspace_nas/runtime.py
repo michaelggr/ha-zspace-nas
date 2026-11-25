@@ -3,15 +3,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from homeassistant.helpers.device_registry import DeviceInfo
 
 from .coordinator import (
     DiskCoordinator,
     DockerCoordinator,
+    EventCoordinator,
+    GpuCoordinator,
     StorageCoordinator,
     SystemCoordinator,
     TaskCoordinator,
+    TimeMachineCoordinator,
     VmCoordinator,
 )
 from .safety import SafetyGuard
@@ -29,6 +33,9 @@ class ZspaceRuntime:
     disk: DiskCoordinator
     tasks: TaskCoordinator
     vm: VmCoordinator
+    gpu: GpuCoordinator
+    tm: TimeMachineCoordinator
+    events: EventCoordinator
     guard: SafetyGuard
     allow_control: bool
     # 是否启用短英文 entity_id（选项 short_entity_ids）
@@ -38,7 +45,12 @@ class ZspaceRuntime:
     vnc_enabled: bool = False
     vnc_secret: bytes = b""
     vnc_host: str | None = None
+    # 事件播报器（可选），由 announce.setup_announcements 装配
+    announcer: Any = None
 
     @property
     def coordinators(self) -> tuple:
-        return (self.system, self.storage, self.docker, self.disk, self.tasks, self.vm)
+        return (
+            self.system, self.storage, self.docker, self.disk,
+            self.tasks, self.vm, self.gpu, self.tm, self.events,
+        )

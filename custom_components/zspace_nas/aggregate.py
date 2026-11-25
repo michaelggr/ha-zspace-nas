@@ -177,6 +177,10 @@ def build_view(
     pools = list(extra.get("pools") or [])
     containers = list(extra.get("containers") or [])
     vms = list(extra.get("vms") or [])
+    # GPU / AI、Time Machine、系统事件：由聚合实体从协调器补齐
+    gpu = extra.get("gpu") or {}
+    time_machine = extra.get("time_machine") or {}
+    events = list(extra.get("events") or [])
 
     # ---- 概览计数 ----
     running_containers = sum(
@@ -210,6 +214,9 @@ def build_view(
         "storage": {"pools": pools},
         "containers": containers,
         "vms": vms,
+        "gpu": gpu,
+        "time_machine": time_machine,
+        "events": events,
         "overview": overview,
     }
 

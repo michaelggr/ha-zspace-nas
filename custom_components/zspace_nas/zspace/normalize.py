@@ -17,7 +17,7 @@ import json
 import re
 from dataclasses import dataclass, field
 
-from .base import as_bytes, as_float, as_int, as_list, percentage, pick
+from .base import as_bool, as_bytes, as_float, as_int, as_list, percentage, pick
 
 
 @dataclass
@@ -652,3 +652,206 @@ def normalize_vms(raw: object) -> VmData:
             )
         )
     return VmData(vms=vms)
+
+
+# ── 外接 NVIDIA GPU / 本地 AI 任务（ops gpu，只读）─────────────────
+@dataclass
+class GpuInfo:
+    """一张外接显卡。真机接口在部分机型返回 E_API，届时列表为空。"""
+
+    name: str | None = None
+    model: str | None = None
+    memory_total_mib: float | None = None
+    memory_used_mib: float | None = None
+    memory_percent: float | None = None
+    utilization: float | None = None
+    temperature: float | None = None
+    driver: str | None = None
+
+
+@dataclass
+class AiTask:
+    """一个本地 AI 任务（zllamas / zaispace）。"""
+
+    name: str
+    process_name: str | None = None
+    status: str | None = None
+    memory_mib: float | None = None
+    gpu: str | None = None
+
+
+@dataclass
+class GpuData:
+    gpus: list[GpuInfo] = field(default_factory=list)
+    tasks: list[AiTask] = field(default_factory=list)
+    # 机型不支持时标记不可用，前端显示「当前机型不支持」而不是一堆空值
+    info_available: bool = True
+    tasks_available: bool = True
+
+
+def _mib(value: object) -> float | None:
+    """显存换算：大于百万的按字节，否则按 MiB。"""
+    number = as_float(value)
+    if number is None:
+        return None
+    return round(number / 1048576, 1) if number > 1_000_000 else round(number, 1)
+
+
+def normalize_gpu_info(raw: object) -> list[GpuInfo]:
+    """`ops gpu info`：外接显卡信息；结构不固定，按候选列表键取。"""
+    items = as_list(raw, keys=("gpuList", "gpus", "gpu", "list", "items", "data", "detail"))
+    result: list[GpuInfo] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        total = _mib(pick(item, ["memoryTotal", "memory_total", "totalMemory", "vramTotal"]))
+        used = _mib(pick(item, ["memoryUsed", "memory_used", "usedMemory", "vramUsed"]))
+        result.append(
+            GpuInfo(
+                name=str(pick(item, ["name", "gpuName", "device"]) or "") or None,
+                model=str(pick(item, ["model", "gpuModel", "product"]) or "") or None,
+                memory_total_mib=total,
+                memory_used_mib=used,
+                memory_percent=percentage(used, total),
+                utilization=as_float(pick(item, ["utilization", "gpuUtil", "usage", "load"])),
+                temperature=as_float(pick(item, ["temperature", "temp"])),
+                driver=str(pick(item, ["driver", "driverVersion"]) or "") or None,
+            )
+        )
+    return result
+
+
+def normalize_gpu_tasks(raw: object) -> list[AiTask]:
+    """`ops gpu tasks`：本地 AI 任务（zllamas / zaispace）。"""
+    items = as_list(raw, keys=("tasks", "taskList", "list", "items", "data"))
+    result: list[AiTask] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        name = str(
+            pick(item, ["name", "taskName", "processName", "process_name", "type"]) or ""
+        )
+        if not name:
+            continue
+        result.append(
+            AiTask(
+                name=name,
+                process_name=str(pick(item, ["processName", "process_name", "process"]) or "") or None,
+                status=str(pick(item, ["status", "state", "stateLang"]) or "") or None,
+                memory_mib=_mib(pick(item, ["memory", "memoryUsed", "mem", "vram"])),
+                gpu=str(pick(item, ["gpu", "gpuName", "device"]) or "") or None,
+            )
+        )
+    return result
+
+
+# ── Time Machine 备份状态（backup time-machine status，只读）────────
+@dataclass
+class TimeMachineData:
+    status: str | None = None
+    enabled: bool | None = None
+    limit_bytes: int | None = None
+    used_bytes: int | None = None
+    usage: float | None = None
+    path: str | None = None
+    have_backup: bool | None = None
+
+
+def normalize_time_machine(raw: object) -> TimeMachineData:
+    """`backup time-machine status`：当前账号备份信息。"""
+    if not isinstance(raw, dict):
+        raw = {}
+    # 状态可能是文案或数字，布尔从 enable/状态名双路解析
+    status_raw = pick(raw, ["status", "state", "tmStatus", "backupStatus"])
+    status = str(status_raw) if status_raw is not None else None
+    enabled = as_bool(pick(raw, ["enabled", "enable", "serviceEnabled", "open"]))
+    if enabled is None and status:
+        enabled = as_bool(status)
+    limit = as_bytes(pick(raw, ["limit_size", "limitSize", "limit", "quota", "maxSize"]))
+    used = as_bytes(pick(raw, ["size", "used_size", "usedSize", "backupSize", "used"]))
+    return TimeMachineData(
+        status=status,
+        enabled=enabled,
+        limit_bytes=limit,
+        used_bytes=used,
+        # 0 配额表示无限制，percentage 会返回 None，正好
+        usage=percentage(used, limit),
+        path=str(pick(raw, ["dir", "path", "backupDir", "directory"]) or "") or None,
+        have_backup=as_bool(pick(raw, ["haveBackup", "hasBackup", "backupExist"])),
+    )
+
+
+# ── 系统事件（system events list，只读）────────────────────────────
+@dataclass
+class EventInfo:
+    id: str
+    type: str | None = None
+    action: str | None = None
+    level: str | None = None
+    title: str | None = None
+    content: str | None = None
+    time: str | None = None
+    is_new: bool = False
+
+
+@dataclass
+class EventData:
+    events: list[EventInfo] = field(default_factory=list)
+
+    @property
+    def new_count(self) -> int:
+        return sum(1 for event in self.events if event.is_new)
+
+
+# 播报级别阶梯：只播报达到门槛的新事件，避免 info 级刷屏
+_LEVEL_RANK = {
+    "info": 0, "notify": 0, "normal": 0, "提示": 0, "通知": 0,
+    "warning": 1, "warn": 1, "告警": 1, "警告": 1, "预警": 1,
+    "error": 2, "严重": 2, "critical": 3, "fatal": 3,
+}
+
+
+def event_level_rank(level: object) -> int:
+    """事件级别 → 数字阶梯，未知级别按 info 处理。"""
+    text = str(level or "").strip().lower()
+    for key, rank in _LEVEL_RANK.items():
+        if key == text or key in text:
+            return rank
+    return 0
+
+
+def _event_time(value: object) -> str | None:
+    """事件时间：秒级时间戳转成 月-日 时:分，其余原样保留。"""
+    if value is None or value == "":
+        return None
+    number = as_float(value)
+    if number is not None and 1_000_000_000 < number < 100_000_000_000:
+        from datetime import datetime
+
+        return datetime.fromtimestamp(number).strftime("%m-%d %H:%M")
+    return str(value)
+
+
+def normalize_events(raw: object) -> EventData:
+    """`system events list`：当前账号事件/登录日志。"""
+    items = as_list(raw, keys=("list", "events", "eventList", "items", "data"))
+    result: list[EventInfo] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        event_id = str(pick(item, ["id", "eventId", "event_id", "logId"]) or "")
+        if not event_id:
+            continue
+        result.append(
+            EventInfo(
+                id=event_id,
+                type=str(pick(item, ["eventType", "event_type", "type"]) or "") or None,
+                action=str(pick(item, ["eventAction", "event_action", "action"]) or "") or None,
+                level=str(pick(item, ["level", "levels", "severity"]) or "") or None,
+                title=str(pick(item, ["title", "name", "subject", "desc"]) or "") or None,
+                content=str(pick(item, ["content", "detail", "message"]) or "") or None,
+                time=_event_time(pick(item, ["time", "createTime", "create_time", "timestamp", "date"])),
+                is_new=bool(as_bool(pick(item, ["isNew", "is_new", "unread", "new"]))),
+            )
+        )
+    return EventData(events=result)

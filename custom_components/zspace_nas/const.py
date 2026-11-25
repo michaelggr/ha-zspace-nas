@@ -28,6 +28,13 @@ CONF_STORAGE_INTERVAL = "storage_interval"
 CONF_DISK_INTERVAL = "disk_interval"
 CONF_DOWNLOAD_INTERVAL = "download_interval"
 CONF_VM_INTERVAL = "vm_interval"
+CONF_GPU_INTERVAL = "gpu_interval"
+CONF_EVENT_INTERVAL = "event_interval"
+# 系统事件音箱播报：默认关闭；填 media_player 实体 ID 才生效
+CONF_ANNOUNCE = "announce_events"
+CONF_ANNOUNCE_MEDIA = "announce_media_player"
+CONF_ANNOUNCE_LEVEL = "announce_min_level"
+CONF_TM_INTERVAL = "time_machine_interval"
 
 # 二进制随集成下发，留空即用内置（按 CPU 架构自动选 x64/arm64）；
 # 登录态目录放 /config 下，跨升级保留。
@@ -44,6 +51,12 @@ DEFAULT_STORAGE_INTERVAL = 300
 DEFAULT_DISK_INTERVAL = 3600   # SMART 逐盘查询，慢，按小时
 DEFAULT_DOWNLOAD_INTERVAL = 300
 DEFAULT_VM_INTERVAL = 120   # 虚拟机列表很轻，两分钟够用
+DEFAULT_GPU_INTERVAL = 300
+DEFAULT_EVENT_INTERVAL = 180
+DEFAULT_TM_INTERVAL = 900
+# 播报级别门槛：warning 及以上
+DEFAULT_ANNOUNCE_LEVEL = "warning"
+ANNOUNCE_LEVELS = ("info", "warning", "error")
 
 MIN_INTERVAL = 10
 MAX_INTERVAL = 3600
@@ -60,6 +73,7 @@ SERVICE_CONTAINER_ACTION = "container_action"
 SERVICE_DUMP_RAW = "dump_raw"
 SERVICE_CONTAINER_LOGS = "container_logs"
 SERVICE_VNC_URL = "vnc_url"
+SERVICE_ANNOUNCE_TEST = "announce_test"
 
 ATTR_CONTAINER_ID = "container_id"
 ATTR_ACTION = "action"

@@ -58,7 +58,13 @@
           "disk_interval": "磁盘 SMART 轮询间隔",
           "vm_interval": "虚拟机轮询间隔",
           "vnc_console": "虚拟机控制台",
-          "vnc_host": "VNC 主机（可选）"
+          "vnc_host": "VNC 主机（可选）",
+          "gpu_interval": "GPU / AI 轮询间隔",
+          "time_machine_interval": "Time Machine 轮询间隔",
+          "event_interval": "系统事件轮询间隔",
+          "announce_events": "系统事件音箱播报",
+          "announce_media_player": "事件播报媒体播放器",
+          "announce_min_level": "播报最低级别"
         },
         "data_description": {
           "allow_control": "开启后才会生成容器开关与重启按钮；删除、强制停止、引擎开关永远不会开放。",
@@ -72,7 +78,13 @@
           "short_entity_ids": "开启后实体 ID 从拼音改为 zspace_cpu_usage 这种英文形式（显示名不变）。写入面板或自动化里的旧 ID 会失效，需要同步更新；迁移不可逆。",
           "vm_interval": "只读接口，一次拿整张表，默认 2 分钟。",
           "vnc_console": "打开后可在 HA 里直接开虚拟机画面（noVNC）。链接带 12 小时签名，只对本机有效。",
-          "vnc_host": "默认自动从虚拟机详情里的地址列挑一个可用地址；填了则强制用这个 IP。"
+          "vnc_host": "默认自动从虚拟机详情里的地址列挑一个可用地址；填了则强制用这个 IP。",
+          "gpu_interval": "外接 GPU 与本地 AI 任务状态，默认 5 分钟；部分机型接口不可用会自动隐藏。",
+          "time_machine_interval": "备份状态变化很慢，默认 15 分钟。",
+          "event_interval": "系统事件/登录日志，默认 3 分钟；新告警可自动播报。",
+          "announce_events": "开启后，新出现的警告及以上事件会通过音箱播报；首次启用只建立基线不念旧事件。",
+          "announce_media_player": "选一个 media_player 实体（小爱/HomePod/蓝牙音箱等）。需先在 HA 配好 TTS 语音。",
+          "announce_min_level": "低于此级别的事件不播报，避免普通通知刷屏。"
         }
       }
     }
@@ -93,6 +105,10 @@
     "vnc_url": {
       "name": "虚拟机控制台链接",
       "description": "为指定虚拟机签一个带过期时间的控制台链接（默认 12 小时）。"
+    },
+    "announce_test": {
+      "name": "播报测试",
+      "description": "通过音箱播报一段测试语音，验证媒体播放器与 TTS 配置。"
     }
   }
 }

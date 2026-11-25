@@ -16,11 +16,16 @@ from .const import (
     CONF_ALLOW_CONTROL,
     CONF_ALLOWED,
     CONF_ALLOW_INSECURE,
+    CONF_ANNOUNCE,
+    CONF_ANNOUNCE_LEVEL,
+    CONF_ANNOUNCE_MEDIA,
     CONF_BINARY,
     CONF_COOLDOWN,
     CONF_DISK_INTERVAL,
     CONF_DOWNLOAD_INTERVAL,
     CONF_DRY_RUN,
+    CONF_EVENT_INTERVAL,
+    CONF_GPU_INTERVAL,
     CONF_PROTECTED,
     CONF_SHORT_IDS,
     CONF_DOCKER_INTERVAL,
@@ -28,20 +33,25 @@ from .const import (
     CONF_PROFILE,
     CONF_PROFILE_HOME,
     CONF_STORAGE_INTERVAL,
+    CONF_TM_INTERVAL,
     CONF_VNC_CONSOLE,
     CONF_VNC_HOST,
     CONF_VM_INTERVAL,
     CONF_SYSTEM_INTERVAL,
     CONF_WEB_URL,
+    DEFAULT_ANNOUNCE_LEVEL,
     DEFAULT_BINARY,
     DEFAULT_COOLDOWN,
     DEFAULT_DISK_INTERVAL,
     DEFAULT_DOCKER_INTERVAL,
     DEFAULT_DOWNLOAD_INTERVAL,
+    DEFAULT_EVENT_INTERVAL,
+    DEFAULT_GPU_INTERVAL,
     DEFAULT_PROFILE,
     DEFAULT_PROFILE_HOME,
     DEFAULT_WEB_URL,
     DEFAULT_STORAGE_INTERVAL,
+    DEFAULT_TM_INTERVAL,
     DEFAULT_VM_INTERVAL,
     DEFAULT_SYSTEM_INTERVAL,
     DOMAIN,
@@ -50,11 +60,15 @@ from .const import (
 from .coordinator import (
     DiskCoordinator,
     DockerCoordinator,
+    EventCoordinator,
+    GpuCoordinator,
     StorageCoordinator,
     SystemCoordinator,
     TaskCoordinator,
+    TimeMachineCoordinator,
     VmCoordinator,
 )
+from .announce import setup_announcements
 from .entity import (
     purge_orphan_containers,
     build_device_info,
@@ -131,6 +145,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     vm = VmCoordinator(
         hass, entry, client, "vm", options.get(CONF_VM_INTERVAL, DEFAULT_VM_INTERVAL)
     )
+    gpu = GpuCoordinator(
+        hass, entry, client, "gpu", options.get(CONF_GPU_INTERVAL, DEFAULT_GPU_INTERVAL)
+    )
+    tm = TimeMachineCoordinator(
+        hass, entry, client, "time_machine", options.get(CONF_TM_INTERVAL, DEFAULT_TM_INTERVAL)
+    )
+    events = EventCoordinator(
+        hass, entry, client, "events", options.get(CONF_EVENT_INTERVAL, DEFAULT_EVENT_INTERVAL)
+    )
 
     # 系统信息是实体存在的前提，失败直接让 entry 进入重试
     await system.async_config_entry_first_refresh()
@@ -141,6 +164,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         disk.async_refresh(),
         tasks.async_refresh(),
         vm.async_refresh(),
+        gpu.async_refresh(),
+        tm.async_refresh(),
+        events.async_refresh(),
         return_exceptions=True,
     )
     for result in results:
@@ -172,6 +198,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         disk=disk,
         tasks=tasks,
         vm=vm,
+        gpu=gpu,
+        tm=tm,
+        events=events,
         guard=guard,
         allow_control=allow_control,
         short_ids=bool(options.get(CONF_SHORT_IDS, False)),
@@ -181,6 +210,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         vnc_host=(options.get(CONF_VNC_HOST) or "").strip() or None,
     )
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = runtime
+
+    # 系统事件音箱播报（可选）：先建立基线，之后只念新出现的高级别事件
+    runtime.announcer = setup_announcements(hass, entry, runtime)
 
     # 停机期间被删掉的容器，注册表里还留着孤儿实体，这里补一次清理
     purge_orphan_containers(hass, entry, runtime)

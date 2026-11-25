@@ -58,7 +58,13 @@
           "disk_interval": "Disk SMART polling interval",
           "vm_interval": "VM polling interval",
           "vnc_console": "VM console",
-          "vnc_host": "VNC host (optional)"
+          "vnc_host": "VNC host (optional)",
+          "gpu_interval": "GPU / AI polling interval",
+          "time_machine_interval": "Time Machine polling interval",
+          "event_interval": "System events polling interval",
+          "announce_events": "Announce system events",
+          "announce_media_player": "Announcement media player",
+          "announce_min_level": "Minimum announcement level"
         },
         "data_description": {
           "allow_control": "Creates container switches and restart buttons. Delete, force-stop and engine power are never exposed.",
@@ -72,7 +78,13 @@
           "short_entity_ids": "Renames entity IDs from pinyin to short English like zspace_cpu_usage (display names unchanged). Old IDs used in dashboards/automations will break; not reversible.",
           "vm_interval": "Read-only call, 2 minutes by default.",
           "vnc_console": "Open the VM screen inside Home Assistant via noVNC. Links are signed and expire in 12 hours.",
-          "vnc_host": "Picked automatically from the VM endpoint list; set this to force an IP."
+          "vnc_host": "Picked automatically from the VM endpoint list; set this to force an IP.",
+          "gpu_interval": "External GPU and local AI task status; 5 min by default. Hidden automatically on unsupported models.",
+          "time_machine_interval": "Backup status changes slowly; 15 min by default.",
+          "event_interval": "System events / login log; 3 min by default. New alerts can be announced.",
+          "announce_events": "When on, new warning-or-higher events are spoken; enabling first time only sets a baseline.",
+          "announce_media_player": "Pick a media_player entity. Requires TTS configured in HA.",
+          "announce_min_level": "Events below this level are not spoken, to avoid noise."
         }
       }
     }
@@ -93,6 +105,10 @@
     "vnc_url": {
       "name": "VM console link",
       "description": "Sign a console link for a VM, valid for the given hours (default 12)."
+    },
+    "announce_test": {
+      "name": "Announcement test",
+      "description": "Speak a test message to verify media player and TTS setup."
     }
   }
 }
