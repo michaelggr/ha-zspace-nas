@@ -157,7 +157,7 @@
           this._callService(btn.dataset, btn);
         } else if (act === 'console') {
           e.stopPropagation();
-          this._openConsole(btn.dataset.url, btn.dataset.name);
+          this._openConsoleFresh(btn);
         } else if (act === 'close-console') {
           const box = this.shadowRoot.getElementById('vnc-modal');
           if (box) box.remove();
@@ -206,6 +206,37 @@
       } finally {
         btn.classList.remove('busy'); btn.innerHTML = original;
       }
+    }
+
+    // 点击控制台时实时向 HA 签一个新链接再打开。
+    // 缓存的 console_url 在集成删除重配（entry_id 变化）或 12h 过期后会失效，
+    // 现签能保证永远拿到当前 entry/密钥对应的有效地址；失败则降级用缓存 url。
+    async _openConsoleFresh(btn) {
+      if (!this._hass) return;
+      const name = btn.dataset.name;
+      const vm = btn.dataset.vm;
+      const fallback = btn.dataset.url;
+      const original = btn.innerHTML;
+      btn.classList.add('busy'); btn.innerHTML = '…';
+      let url = fallback;
+      try {
+        const conn = this._hass.connection;
+        if (conn && conn.sendMessagePromise) {
+          const resp = await conn.sendMessagePromise({
+            type: 'call_service', domain: 'zspace_nas', service: 'vnc_url',
+            service_data: { vm: vm, hours: 12 }, return_response: true,
+          });
+          url = (resp && resp.response && resp.response.url) || url;
+        }
+      } catch (err) {
+        // 实时签发失败就用缓存链接兜底
+      } finally {
+        btn.classList.remove('busy'); btn.innerHTML = original;
+      }
+      if (url) {
+        // 像设备页「访问」链接那样直接新标签打开，避开 iframe 里 noVNC 的限制。
+        window.open(url, '_blank', 'noopener');
+      } else btn.title = '无法获取控制台链接，请确认集成选项已开启「虚拟机控制台」';
     }
 
     _openConsole(url, name) {
@@ -531,8 +562,8 @@
             <div class="vm-ops">
               ${pwr ? `<button class="op ${on ? 'stop' : 'start'}" data-act="service" data-service="${pwr}" title="${on ? '关机' : '开机'}">${this._icon(ICON.power)}</button>` : ''}
               ${on && reboot ? `<button class="op" data-act="service" data-service="${reboot}" title="重启">${this._icon(ICON.restart)}</button>` : ''}
-              <button class="console-btn" data-act="console" data-url="${esc(v.console_url || '')}" data-name="${esc(v.title || v.name)}"
-                ${on && v.console_url ? '' : 'disabled'}>${this._icon(ICON.console)} 控制台</button>
+              <button class="console-btn" data-act="console" data-vm="${esc(v.name || '')}" data-url="${esc(v.console_url || '')}" data-name="${esc(v.title || v.name)}"
+                ${on ? '' : 'disabled'}>${this._icon(ICON.console)} 控制台</button>
             </div>
           </div>`;
         }).join('') || '<div class="none">没有匹配的虚拟机</div>'}</div>
