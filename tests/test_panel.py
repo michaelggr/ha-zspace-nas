@@ -133,6 +133,17 @@ class PanelAssetTest(unittest.TestCase):
             self.assertIn("attrs.classes", source)
             self.assertIn("Number.isFinite(Number(attrs.total))", source)
 
+    def test_console_fetches_fresh_url(self) -> None:
+        # 控制台不能再直接用缓存的 console_url：集成删除重配后 entry_id 变化，
+        # 缓存签名会失效导致 403。必须点击时通过 vnc_url 服务实时签发。
+        for path in (CARD_JS, PANEL_JS):
+            source = path.read_text(encoding="utf-8")
+            self.assertIn("_openConsoleFresh", source)
+            self.assertIn("return_response: true", source)
+            self.assertIn("service: 'vnc_url'", source)
+            self.assertIn("window.open(url, '_blank'", source)
+            self.assertNotIn("this._openConsole(btn.dataset.url", source)
+
     def test_click_uses_composed_path(self) -> None:
         # 事件监听挂在宿主上，Shadow DOM 会把 e.target 重定向成宿主本身。
         # 若用 e.target.closest() 找按钮，标签切换和所有操作按钮都会失效。
