@@ -108,11 +108,20 @@
       if (!this._hass) return null;
       const cfgId = this._config.entity;
       if (cfgId && this._hass.states[cfgId]) return this._hass.states[cfgId];
-      // 兜底：自动发现集成的聚合实体（被占号时为 _2 后缀）
+      // 兜底 1：默认实体 ID（被占号时带 _2 后缀）
       const key = Object.keys(this._hass.states).find(
         (id) => /^sensor\.zspace_all_entities(?:_\d+)?$/.test(id)
       );
-      return key ? this._hass.states[key] : null;
+      if (key) return this._hass.states[key];
+      // 兜底 2：用户改过实体 ID 时，按聚合实体独有属性签名识别。
+      // view/groups/classes/total 同时出现是极空间聚合实体的特征，避免误认其它传感器。
+      return Object.values(this._hass.states).find((state) => {
+        const attrs = state.attributes || {};
+        return state.entity_id.startsWith('sensor.') &&
+          attrs.view && typeof attrs.view === 'object' &&
+          Array.isArray(attrs.groups) && attrs.classes &&
+          Number.isFinite(Number(attrs.total));
+      }) || null;
     }
 
     _bind() {
@@ -253,7 +262,7 @@
       if (!view) {
         root.innerHTML = `<ha-card><div class="empty">
           ${this._icon(ICON.alert)}<div><b>极空间聚合实体未就绪</b>
-          <p>请确认集成版本 ≥ 0.10.0，且实体 <code>sensor.zspace_all_entities</code> 可用。</p></div></div></ha-card>`;
+          <p>请确认集成版本 ≥ 0.11.2；面板会自动识别改名后的聚合实体，若仍不可见请检查集成加载状态。</p></div></div></ha-card>`;
         this._injectStyle();
         return;
       }

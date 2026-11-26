@@ -124,6 +124,15 @@ class PanelAssetTest(unittest.TestCase):
         self.assertIn(MARKER, panel)
         self.assertEqual(card.split(MARKER)[0], panel.split(MARKER)[0])
 
+    def test_aggregate_entity_discovery_survives_rename(self) -> None:
+        # 用户改过实体 ID 后默认 ID 不存在，卡片必须按属性签名兜底识别聚合实体。
+        for path in (CARD_JS, PANEL_JS):
+            source = path.read_text(encoding="utf-8")
+            self.assertIn("attrs.view && typeof attrs.view === 'object'", source)
+            self.assertIn("Array.isArray(attrs.groups)", source)
+            self.assertIn("attrs.classes", source)
+            self.assertIn("Number.isFinite(Number(attrs.total))", source)
+
 
 if __name__ == "__main__":
     unittest.main()
