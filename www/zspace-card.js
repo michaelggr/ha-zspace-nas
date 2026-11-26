@@ -125,8 +125,14 @@
     }
 
     _bind() {
+      // Shadow DOM 事件冒泡到宿主时会被重定向：e.target 变成宿主本身，
+      // 必须用 composedPath() 取真实节点，否则标签/按钮点击全部失效。
+      const fromPath = (e, predicate) => {
+        const path = typeof e.composedPath === 'function' ? e.composedPath() : [e.target];
+        return path.find(predicate) || null;
+      };
       this.addEventListener('click', (e) => {
-        const btn = e.target.closest('[data-act]');
+        const btn = fromPath(e, (n) => n && n.dataset && n.dataset.act);
         if (!btn) return;
         const act = btn.dataset.act;
         if (act === 'tab') {
@@ -163,8 +169,9 @@
         }
       });
       this.addEventListener('input', (e) => {
-        if (e.target.id === 'filter-input') {
-          this._filter = e.target.value.trim().toLowerCase();
+        const input = fromPath(e, (n) => n && n.id === 'filter-input');
+        if (input) {
+          this._filter = input.value.trim().toLowerCase();
           this._renderList();
         }
       });

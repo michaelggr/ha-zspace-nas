@@ -133,6 +133,22 @@ class PanelAssetTest(unittest.TestCase):
             self.assertIn("attrs.classes", source)
             self.assertIn("Number.isFinite(Number(attrs.total))", source)
 
+    def test_click_uses_composed_path(self) -> None:
+        # 事件监听挂在宿主上，Shadow DOM 会把 e.target 重定向成宿主本身。
+        # 若用 e.target.closest() 找按钮，标签切换和所有操作按钮都会失效。
+        for path in (CARD_JS, PANEL_JS):
+            source = path.read_text(encoding="utf-8")
+            self.assertIn("e.composedPath()", source)
+            self.assertNotIn("e.target.closest(", source)
+            self.assertIn("n.dataset && n.dataset.act", source)
+
+    def test_filter_input_uses_composed_path(self) -> None:
+        # 同理，搜索框的 input 事件也必须从 composedPath 取真实节点。
+        for path in (CARD_JS, PANEL_JS):
+            source = path.read_text(encoding="utf-8")
+            self.assertIn("n.id === 'filter-input'", source)
+            self.assertNotIn("if (e.target.id === 'filter-input')", source)
+
 
 if __name__ == "__main__":
     unittest.main()
