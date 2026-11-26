@@ -283,6 +283,7 @@ action:
 
 ## 版本记录
 
+- **v0.11.1** — 修复侧边栏面板从未注册成功的问题：HA 2026 移除了 `frontend_url`/`sidebar` 参数，旧参数抛 TypeError 被静默吞掉；改用 `add_extra_js_url` 注入自托管 JS + 新版面板参数，并把 JS 视图设为免鉴权（否则 module 请求 401）。升级并重启后左侧会出现集成自带的「极空间」面板（五个标签）；旧版手动 dashboard 不受影响，可自行删除。
 - **v0.11.0** — 新增外接 GPU / 本地 AI 任务、Time Machine 备份状态、系统事件三类只读监控；系统事件新告警可经音箱 TTS 播报（按 id 去重 + 级别过滤 + 冷却防刷屏）；面板新增「运维」页，侧边栏五个标签；新增 `announce_test` 服务
 - **v0.10.5** — 修复概览页存储模板 SecurityError（`list.append` 被 HA 沙箱禁用）
 - **v0.10.4** — 虚拟机视图 filter 去重，去掉 entity_id 与属性双条件导致的重复卡片

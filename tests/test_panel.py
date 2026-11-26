@@ -40,21 +40,27 @@ class PanelRegistrationTest(unittest.TestCase):
         self.assertIn("async_setup_panel", called)
         self.assertIn("async_remove_panel_if_last", called)
 
-    def test_register_uses_frontend_url(self) -> None:
-        # frontend_url 是让 HA 动态加载我们自托管 JS 的关键参数。
-        tree = ast.parse(PANEL_PY.read_text(encoding="utf-8"))
-        found = False
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.Call):
-                continue
-            name = node.func.id if isinstance(node.func, ast.Name) else None
-            if name != "register":
-                continue
-            kwargs = {kw.arg for kw in node.keywords}
-            self.assertIn("frontend_url", kwargs, "面板注册缺少 frontend_url")
-            self.assertIn("sidebar", kwargs, "面板注册未设置 sidebar")
-            found = True
-        self.assertTrue(found, "未找到 async_register_built_in_panel 调用")
+    def test_register_uses_ha2026_signature(self) -> None:
+        # HA 2026 起 async_register_built_in_panel 移除了 frontend_url/sidebar，
+        # 改用 sidebar_title/sidebar_icon/frontend_url_path；旧参数会抛 TypeError
+        # 被静默吞掉，面板永远注册不上（这是本次修复的核心）。
+        src = PANEL_PY.read_text(encoding="utf-8")
+        # 定位 register(...) 调用块（到闭合括号）
+        i = src.find("register(")
+        self.assertGreaterEqual(i, 0, "未找到面板注册调用")
+        block = src[i : src.find(")", i) + 1]
+        for required in ("sidebar_title", "sidebar_icon", "frontend_url_path"):
+            self.assertIn(required, block, f"面板注册缺少 {required}")
+        for removed in ("frontend_url=", "sidebar=", "title=", "icon="):
+            # 用行首缩进锚定，避免 sidebar_title 误命中 title=
+            self.assertNotIn("\n            " + removed, block, f"面板注册仍有废弃参数 {removed}")
+
+    def test_self_hosted_js_registered_via_extra_js(self) -> None:
+        # 自托管 JS 必须经 add_extra_js_url 注入前端，且视图必须免鉴权，
+        # 否则 <script type="module"> 请求会被 401 挡下，元素定义不出来。
+        source = PANEL_PY.read_text(encoding="utf-8")
+        self.assertIn("add_js(hass, PANEL_URL)", source)
+        self.assertIn("requires_auth = False", source)
 
     def test_panel_view_does_not_use_self_hass(self) -> None:
         # 与控制台视图同样的 HA 2026 兼容约束。

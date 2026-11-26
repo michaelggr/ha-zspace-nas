@@ -37,12 +37,16 @@ def _read_js(path: str) -> str:
 
 
 class PanelAssetView(HomeAssistantView):
-    """从集成目录提供面板 JS，浏览器通过 frontend_url 动态 import。"""
+    """从集成目录提供面板 JS，浏览器作为 ES module 直接加载。
+
+    必须免鉴权：frontend 把 extra_module_url 渲染成 <script type="module">，
+    浏览器发这类请求时不会带 Authorization 头，requires_auth=True 会导致 401，
+    面板元素永远定义不出来。JS 里只有渲染逻辑，没有任何凭据或 NAS 信息。
+    """
 
     url = PANEL_URL
     name = "api:zspace_nas:panel_asset"
-    # 面板 JS 本身不含隐私数据；保持鉴权，避免外部站点探测集成是否在装。
-    requires_auth = True
+    requires_auth = False
 
     async def get(self, request: web.Request) -> web.Response:
         # HA 2026.x 起 HomeAssistantView 不再注入 self.hass，从 app 取。
@@ -61,11 +65,20 @@ class PanelAssetView(HomeAssistantView):
         )
 
 
-def _frontend_api() -> tuple[Any, Any]:
-    """延迟导入前端 API，兼容不同 HA 小版本。"""
+def _frontend_api() -> tuple[Any, Any, Any, Any]:
+    """延迟导入前端 API，兼容不同 HA 小版本。
+
+    HA 2026 起注册内置面板的签名改成 sidebar_title/sidebar_icon 等，且不再有
+    frontend_url 参数；自托管 JS 改用 add_extra_js_url 让前端加载。
+    """
     from homeassistant.components import frontend
 
-    return frontend.async_register_built_in_panel, frontend.async_remove_panel
+    return (
+        frontend.async_register_built_in_panel,
+        frontend.async_remove_panel,
+        frontend.add_extra_js_url,
+        frontend.remove_extra_js_url,
+    )
 
 
 async def async_setup_panel(hass: HomeAssistant) -> None:
@@ -75,32 +88,35 @@ async def async_setup_panel(hass: HomeAssistant) -> None:
         return
 
     hass.http.register_view(PanelAssetView())
-    register, _ = _frontend_api()
+    register, _, add_js, _ = _frontend_api()
     try:
+        # 先让前端把自托管 JS 作为 module 注入；再注册面板引用自定义元素
+        # ha-panel-zspace（component_name=zspace 对应 <ha-panel-zspace>）。
+        add_js(hass, PANEL_URL)
         register(
             hass,
             PANEL_NAME,
-            title=PANEL_TITLE,
-            icon=PANEL_ICON,
-            frontend_url=PANEL_URL,
-            sidebar=True,
+            sidebar_title=PANEL_TITLE,
+            sidebar_icon=PANEL_ICON,
+            frontend_url_path=PANEL_NAME,
         )
-    except TypeError:
-        # 极老的 HA 没有 frontend_url 参数，退化为不注册面板但不影响集成本体。
-        _LOGGER.warning("当前 HA 版本不支持 frontend_url，跳过侧边栏面板注册")
+    except (TypeError, ValueError) as err:
+        # 老 HA 没有 add_extra_js_url 或签名不同：不让集成整体挂掉，仅跳过面板。
+        _LOGGER.warning("当前 HA 版本无法注册极空间侧边栏面板：%s", err)
         return
     store[_REGISTERED_KEY] = True
-    _LOGGER.info("极空间侧边栏面板已注册：%s", PANEL_URL)
+    _LOGGER.info("极空间侧边栏面板已注册：component=%s js=%s", PANEL_NAME, PANEL_URL)
 
 
 async def async_remove_panel_if_last(hass: HomeAssistant) -> None:
-    """最后一个配置实例卸载时，移除侧边栏面板。"""
+    """最后一个配置实例卸载时，移除侧边栏面板与注入的 JS。"""
     store = hass.data.get(DOMAIN, {})
     # 还有其它实例在用（key 为 entry_id，非下划线开头的内部标记），保留面板。
     if any(not key.startswith("_") for key in store):
         return
     if not store.pop(_REGISTERED_KEY, False):
         return
-    _, remove = _frontend_api()
+    _, remove, _, remove_js = _frontend_api()
     remove(hass, PANEL_NAME)
+    remove_js(hass, PANEL_URL)
     _LOGGER.info("极空间侧边栏面板已移除")
