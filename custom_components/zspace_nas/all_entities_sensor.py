@@ -382,10 +382,20 @@ class ZspaceAllEntitiesSensor(ForcedEntityIdMixin, SensorEntity):
         return index
 
     def _console_url(self, vm_name: str) -> str | None:
-        """从设备注册表 configuration_url 取该 VM 的 noVNC 链接（已签名）。"""
-        identifiers = {(DOMAIN, f"{self.runtime.identifier}_vm_{vm_name}")}
-        device = dr.async_get(self.hass).async_get_device(identifiers=identifiers)
-        return getattr(device, "configuration_url", None) if device else None
+        """实时签发该 VM 的 noVNC 链接，保证 entry_id / 密钥变更后仍然有效。
+
+        旧实现从设备注册表 configuration_url 读静态签名链接。用户删除重配集成后，
+        entry_id 会变，设备注册项里残留的旧签名永远无法通过 _resolve 校验，
+        面板点「控制台」就报「链接无效或已过期」。这里改为每次用当前 runtime 现签：
+        - 不受旧设备注册项影响；
+        - 签名不含在 _signature 里，不会导致状态机频繁重写。
+        """
+        runtime = self.runtime
+        if not getattr(runtime, "vnc_enabled", False) or not getattr(runtime, "vnc_secret", b""):
+            return None
+        from .vnc import console_url
+
+        return console_url(self.hass, runtime, vm_name)
 
     def _build_groups(self, entries, states) -> list[dict[str, Any]]:
         """fnOS 风格原始分组：一台设备一个节点。"""
